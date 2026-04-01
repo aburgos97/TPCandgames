@@ -85,7 +85,7 @@ html, body {
 .lb-topbar {
   position: relative; z-index: 10;
   display: flex; align-items: center;
-  padding: 48px 18px 0;
+  padding: 12px 18px 0;
 }
 .lb-back {
   width: 30px; height: 30px;
@@ -508,12 +508,34 @@ html, body {
 }
 .avatar-confirm-btn:hover { opacity: .9; }
 
+/* ══ BREADCRUMB ══════════════════════════ */
+.breadcrumb {
+  max-width: 430px; margin: 0 auto;
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 18px 0;
+  position: relative; z-index: 20;
+}
+.breadcrumb a, .breadcrumb span {
+  font-size: 11px; font-weight: 600; letter-spacing: .5px;
+  text-decoration: none; color: rgba(248,248,248,.45);
+  transition: color .15s;
+}
+.breadcrumb a:hover { color: #BA7865; }
+.breadcrumb .sep { font-size: 10px; color: rgba(248,248,248,.25); }
+.breadcrumb .current { color: rgba(248,248,248,.8); }
+
 </style>
 </head>
 <body>
 
 <!-- TEST BANNER -->
 <div class="test-strip">🧪 THE POT GAMES · ENTORNO TEST · No es producción</div>
+
+<nav class="breadcrumb">
+  <a href="/">Home</a>
+  <span class="sep">›</span>
+  <span class="current">Games</span>
+</nav>
 
 <!-- ════════════════════════════════════════
      LEADERBOARD
@@ -527,7 +549,7 @@ html, body {
 
   <!-- Top bar -->
   <div class="lb-topbar">
-    <div class="lb-back">‹</div>
+    <a href="/" class="lb-back">‹</a>
     <div class="lb-title-wrap">
       <div class="lb-title">Leaderboard</div>
       <span class="lb-subtitle">The Pot Club</span>
