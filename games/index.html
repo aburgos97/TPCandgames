@@ -16,6 +16,7 @@ html, body {
   min-height: 100vh;
 }
 
+/* ══ MOBILE BASE (≤767px) — igual que antes ══ */
 .screen {
   max-width: 430px;
   margin: 0 auto;
@@ -219,7 +220,6 @@ html, body {
   );
   border-radius: 22px 22px 0 0;
   padding-bottom: 50px;
-  /* Sombra superior */
   box-shadow: 0 -8px 24px rgba(0,0,0,.4);
 }
 .lb-list-header {
@@ -524,6 +524,93 @@ html, body {
 .breadcrumb .sep { font-size: 10px; color: rgba(248,248,248,.25); }
 .breadcrumb .current { color: rgba(248,248,248,.8); }
 
+
+/* ══════════════════════════════════════════
+   DESKTOP RESPONSIVE (≥768px)
+   ══════════════════════════════════════════ */
+@media (min-width: 768px) {
+
+  /* Strip y breadcrumb se expanden */
+  .test-strip,
+  .breadcrumb {
+    max-width: 960px;
+  }
+
+  /* El screen deja de ser columna estrecha */
+  .screen {
+    max-width: 960px;
+    overflow: visible;
+  }
+
+  /* ── Leaderboard: two-column grid ── */
+  #screen-leaderboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "topbar  topbar"
+      "podium  list";
+    min-height: 100vh;
+    background: linear-gradient(135deg,
+      #3d1508 0%,
+      #2a0d06 30%,
+      #1a0805 60%,
+      #160604 100%
+    );
+  }
+
+  /* El fondo hero ocupa sólo la columna izquierda */
+  .lb-hero-bg {
+    width: 50%;
+    height: 100%;
+  }
+
+  .lb-topbar {
+    grid-area: topbar;
+    padding: 20px 28px 12px;
+    border-bottom: 1px solid rgba(186,120,101,.12);
+  }
+
+  .lb-title { font-size: 26px; }
+
+  /* Columna izquierda: podio */
+  .lb-podium {
+    grid-area: podium;
+    padding: 40px 24px 40px;
+    align-items: center;
+    /* Centra verticalmente el podio */
+    align-self: center;
+  }
+
+  /* Columna derecha: lista */
+  .lb-list-bg {
+    grid-area: list;
+    margin-top: 0;
+    border-radius: 0;
+    border-left: 1px solid rgba(186,120,101,.12);
+    background: rgba(10,3,1,.6);
+    /* Scroll interno si hay muchos jugadores */
+    overflow-y: auto;
+    max-height: calc(100vh - 60px);
+  }
+
+  /* El fade no tiene sentido con scroll interno */
+  .lb-fade { display: none; }
+
+  /* Profile también se expande */
+  #screen-profile {
+    max-width: 960px;
+  }
+}
+
+/* ══ Pantallas muy grandes (≥1200px) ═════ */
+@media (min-width: 1200px) {
+  .test-strip,
+  .breadcrumb,
+  .screen {
+    max-width: 1100px;
+  }
+}
 </style>
 </head>
 <body>
