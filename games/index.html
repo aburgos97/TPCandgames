@@ -704,6 +704,11 @@ let BADGES   = {};
 let ranked   = [];
 let state    = { jugadores:[], juegos:[], badges:[], rankings:[], jugador_badges:[] };
 
+// Tendencias de posición — se pueblan cuando haya histórico de rankings
+// Por ahora vacíos: no muestra flechas ↑↓ hasta tener comparación de sesiones
+const trends   = {};   // { [rankPos]: '▲' | '▼' }
+const trendCls = {};   // { [rankPos]: 'up' | 'down' }
+
 // ── Transformar datos del worker al formato que usa el HTML ──
 function transformData(data) {
   state = data;
@@ -749,17 +754,16 @@ function transformData(data) {
 
 // ── Carga desde el Worker ────────────────────────────
 async function init() {
+  showLoading(true);
   try {
-    showLoading(true);
     const res  = await fetch(`${WORKER_URL}/api/club/estado`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     transformData(data);
-    showLoading(false);
-    renderLB();
   } catch(e) {
     console.warn('Worker no disponible, usando datos demo:', e.message);
     loadDemoData();
+  } finally {
     showLoading(false);
     renderLB();
   }
