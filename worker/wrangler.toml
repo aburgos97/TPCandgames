@@ -1,0 +1,30 @@
+name            = "tpc-worker"
+main            = "worker.js"
+compatibility_date = "2026-01-01"
+account_id      = "44f2a800b6fd10b13b16855dcd28555c"
+
+# ── D1 Databases ────────────────────────────────────────────
+# FIFA 18 — partidos, jugadores, temporadas
+[[d1_databases]]
+binding      = "DB"
+database_name = "tpc-fifa18"
+database_id  = "7cff90ca-b5de-4c97-822f-435fdcf639f1"
+
+# CLUB_DB — se eliminó: la plataforma ahora computa todo desde tpc-fifa18.
+# Si en el futuro se crea una DB de club separada, descomentar y actualizar el ID:
+# [[d1_databases]]
+# binding      = "CLUB_DB"
+# database_name = "tpc-club"
+# database_id  = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+
+# ── Secrets (no van aquí, se setean con wrangler CLI) ───────
+# npx wrangler secret put ADMIN_PWD_HASH
+# npx wrangler secret put ANTHROPIC_KEY
+# npx wrangler secret put YOUTUBE_CHANNEL
+# npx wrangler secret put YOUTUBE_API_KEY
+
+# ── Local dev ────────────────────────────────────────────────
+# Para testear localmente con datos reales de D1:
+#   npx wrangler dev --remote
+# Para testear con DB local (sin datos):
+#   npx wrangler dev

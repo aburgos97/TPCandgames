@@ -1,16 +1,24 @@
 /**
  * TPC Worker — Cloudflare Worker Central
- * Maneja: D1 tpc-fifa18 (DB) + D1 tpc-club (CLUB_DB) + YouTube + Anthropic
+ * BD: tpc-fifa18 (DB) + tpc-club (CLUB_DB)
  *
- * Bindings D1 necesarios en Cloudflare Dashboard → Worker → Settings → Bindings:
+ * Bindings D1 en Cloudflare Dashboard → Worker → Settings → Bindings:
  *   DB      → tpc-fifa18   (7cff90ca-b5de-4c97-822f-435fdcf639f1)
- *   CLUB_DB → tpc-club     (5636e4aa-d013-4eaf-abd5-90207794bd0b)
+ *   CLUB_DB → tpc-club     (pendiente — ver wrangler.toml)
+ *
+ * Secrets:
+ *   ADMIN_PWD_HASH   — SHA-256 hex de la contraseña de admin
+ *   ANTHROPIC_KEY    — API key de Anthropic (para /api/scan)
+ *   YOUTUBE_CHANNEL  — ID del canal de YouTube
+ *   YOUTUBE_API_KEY  — API key de YouTube
  */
 
 const ALLOWED_ORIGINS = [
   'https://thepot-club.com',
   'https://www.thepot-club.com',
   'https://tpcgames.pages.dev',
+  'https://tpcandgames.pages.dev',
+  'https://tpcgames26.netlify.app',
   'http://localhost',
   'http://localhost:5500',
   'http://127.0.0.1',
@@ -37,6 +45,22 @@ function err(msg, status = 400, origin = '') {
   return json({ error: msg }, status, origin);
 }
 
+// ── Rate limiting (in-memory, se resetea por instancia) ──────
+const rateLimitMap = new Map();
+const RATE_LIMIT  = 20;
+const RATE_WINDOW = 60_000;
+
+function checkRateLimit(ip) {
+  const now    = Date.now();
+  const record = rateLimitMap.get(ip);
+  if (!record || now - record.start > RATE_WINDOW) {
+    rateLimitMap.set(ip, { start: now, count: 1 });
+    return true;
+  }
+  record.count++;
+  return record.count <= RATE_LIMIT;
+}
+
 async function verifyPassword(pwd, env) {
   const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pwd));
   const hash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
@@ -48,56 +72,175 @@ export default {
     const origin = request.headers.get('Origin') || '';
     const url    = new URL(request.url);
     const path   = url.pathname;
+    const ip     = request.headers.get('CF-Connecting-IP') || 'unknown';
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
 
+    if (path.startsWith('/api/')) {
+      if (!checkRateLimit(ip)) {
+        return err('Too many requests. Intentá de nuevo en 1 minuto.', 429, origin);
+      }
+    }
+
     try {
 
-      // ══════════════════════════════════════════════════════════
+      // ══════════════════════════════════════════════════════
       // RUTAS /api/club/* — tpc-club D1
-      // ══════════════════════════════════════════════════════════
+      // ══════════════════════════════════════════════════════
 
-      // GET /api/club/estado — carga completa para tpc-games.html
       if (path === '/api/club/estado' && request.method === 'GET') {
-        const [jugadores, juegos, badges, rankings, jugador_badges] = await Promise.all([
-          env.CLUB_DB.prepare('SELECT * FROM jugadores ORDER BY cogopoints DESC').all(),
-          env.CLUB_DB.prepare('SELECT * FROM juegos WHERE activo = 1').all(),
-          env.CLUB_DB.prepare('SELECT * FROM badges ORDER BY rareza DESC').all(),
-          env.CLUB_DB.prepare('SELECT * FROM jugador_juego_rank').all(),
-          env.CLUB_DB.prepare('SELECT * FROM jugador_badges').all(),
-        ]);
+        // ── Temporada activa ────────────────────────────────────
+        const temp = await env.DB.prepare(
+          'SELECT id FROM temporadas WHERE activa = 1 LIMIT 1'
+        ).first();
+        const temporadaId = temp?.id || 1;
+
+        // ── CATÁLOGO DE JUEGOS ──────────────────────────────────
+        // Para agregar un nuevo juego en el futuro:
+        //   1. Crear su D1 DB y binding en wrangler.toml
+        //   2. Agregar un bloque a GAMES con su db y la query de stats
+        // ────────────────────────────────────────────────────────
+        const GAMES = [
+          { id: 1, nombre: 'FIFA 18', slug: 'fifa18', icono: '⚽', db: env.DB, temporadaId },
+          // { id: 2, nombre: 'Pool',    slug: 'pool',   icono: '🎱', db: env.POOL_DB, temporadaId: 1 },
+        ];
+
+        // ── Stats agregadas por jugador por juego ───────────────
+        async function getStatsForGame(game) {
+          const res = await game.db.prepare(`
+            SELECT
+              j.id,
+              j.nombre                                                                        AS nickname,
+              COUNT(p.id)                                                                     AS pj,
+              SUM(CASE WHEN (p.jugador1_id=j.id AND p.puntos1>p.puntos2) OR
+                            (p.jugador2_id=j.id AND p.puntos2>p.puntos1) THEN 1 ELSE 0 END)  AS v,
+              SUM(CASE WHEN p.puntos1=p.puntos2                           THEN 1 ELSE 0 END)  AS e,
+              SUM(CASE WHEN (p.jugador1_id=j.id AND p.puntos1<p.puntos2) OR
+                            (p.jugador2_id=j.id AND p.puntos2<p.puntos1) THEN 1 ELSE 0 END)  AS d,
+              SUM(CASE WHEN p.jugador1_id=j.id THEN p.goles1   ELSE p.goles2   END)          AS gf,
+              SUM(CASE WHEN p.jugador1_id=j.id THEN p.goles2   ELSE p.goles1   END)          AS gc,
+              SUM(CASE WHEN p.jugador1_id=j.id THEN p.puntos1  ELSE p.puntos2  END)          AS pts,
+              AVG(CASE WHEN p.jugador1_id=j.id THEN p.estrellas1 ELSE p.estrellas2 END)      AS avg_str,
+              MAX(CASE WHEN p.jugador1_id=j.id THEN p.goles1   ELSE p.goles2   END)          AS max_goles,
+              SUM(CASE WHEN
+                (p.jugador1_id=j.id AND p.puntos1>p.puntos2 AND p.estrellas1<p.estrellas2) OR
+                (p.jugador2_id=j.id AND p.puntos2>p.puntos1 AND p.estrellas2<p.estrellas1)
+              THEN 1 ELSE 0 END)                                                              AS upsets
+            FROM jugadores j
+            LEFT JOIN partidos p
+              ON (p.jugador1_id=j.id OR p.jugador2_id=j.id) AND p.temporada_id=?
+            WHERE j.activo=1
+            GROUP BY j.id, j.nombre
+            ORDER BY pts DESC, v DESC
+          `).bind(game.temporadaId).all();
+          return res.results || [];
+        }
+
+        // ── Racha actual (victorias consecutivas) ───────────────
+        async function getStreaks(game) {
+          const res = await game.db.prepare(`
+            SELECT jugador1_id, jugador2_id, puntos1, puntos2
+            FROM partidos WHERE temporada_id=?
+            ORDER BY jugado_at ASC
+          `).bind(game.temporadaId).all();
+          const matches = res.results || [];
+
+          const streakMap = {};
+          for (const m of matches) {
+            for (const pid of [m.jugador1_id, m.jugador2_id]) {
+              const myPts  = m.jugador1_id === pid ? m.puntos1 : m.puntos2;
+              const rivPts = m.jugador1_id === pid ? m.puntos2 : m.puntos1;
+              if (myPts > rivPts)       streakMap[pid] = (streakMap[pid] || 0) + 1;
+              else if (myPts < rivPts)  streakMap[pid] = 0;
+              // empate no corta ni suma racha
+            }
+          }
+          return streakMap;
+        }
+
+        // ── Badges definidos (solo los que requieren datos de partido) ──
+        // Los demás logros se calculan client-side en LOGROS_DEF
+        const SERVER_BADGES = [
+          { id: 1, icono: '🔥', nombre: 'Goleador',   rareza: 'raro',  check: s => (s.max_goles || 0) >= 5 },
+          { id: 2, icono: '💥', nombre: 'Upset King', rareza: 'epico', check: s => (s.upsets    || 0) >= 1 },
+        ];
+
+        // ── Agregar resultados de todos los juegos ──────────────
+        const jugadoresMap = {};
+        const rankings     = [];
+        const jugadorBadges = [];
+
+        for (const game of GAMES) {
+          const [stats, streaks] = await Promise.all([
+            getStatsForGame(game),
+            getStreaks(game),
+          ]);
+
+          for (const s of stats) {
+            // Jugador (toma el primero que lo defina, los demás juegos suman ranking)
+            if (!jugadoresMap[s.id]) {
+              jugadoresMap[s.id] = {
+                id:           s.id,
+                nickname:     s.nickname,
+                avatar_emoji: '🌿',
+                cogopoints:   0,
+                bio:          '',
+              };
+            }
+            const pts = s.pts || 0;
+            jugadoresMap[s.id].cogopoints += Math.round(pts * 10) / 10;
+
+            rankings.push({
+              jugador_id: s.id,
+              juego_id:   game.id,
+              partidos:   s.pj   || 0,
+              puntos:     s.pj > 0 ? Math.round((pts / s.pj) * 100) / 100 : 0,
+              victorias:  s.v    || 0,
+              empates:    s.e    || 0,
+              derrotas:   s.d    || 0,
+              gf:         s.gf   || 0,
+              gc:         s.gc   || 0,
+              racha:      streaks[s.id] || 0,
+              avg_str:    s.avg_str ? Math.round(s.avg_str * 10) / 10 : 0,
+            });
+
+            // Badges computados server-side
+            for (const badge of SERVER_BADGES) {
+              if (badge.check(s)) {
+                jugadorBadges.push({ jugador_id: s.id, badge_id: badge.id });
+              }
+            }
+          }
+        }
+
+        // Jugadores ordenados por CogoPoints totales
+        const jugadores = Object.values(jugadoresMap)
+          .sort((a, b) => b.cogopoints - a.cogopoints);
+
         return json({
-          jugadores:      jugadores.results  || [],
-          juegos:         juegos.results     || [],
-          badges:         badges.results     || [],
-          rankings:       rankings.results   || [],
-          jugador_badges: jugador_badges.results || [],
+          jugadores,
+          juegos:         GAMES.map(g => ({ id: g.id, nombre: g.nombre, slug: g.slug, icono: g.icono, activo: 1 })),
+          badges:         SERVER_BADGES.map(({ check: _, ...b }) => b),
+          rankings,
+          jugador_badges: jugadorBadges,
         }, 200, origin);
       }
 
-      // GET /api/club/jugadores — lista de jugadores
       if (path === '/api/club/jugadores' && request.method === 'GET') {
-        const r = await env.CLUB_DB.prepare(
-          'SELECT * FROM jugadores ORDER BY cogopoints DESC'
+        const r = await env.DB.prepare(
+          'SELECT id, nombre AS nickname FROM jugadores WHERE activo=1 ORDER BY nombre'
         ).all();
         return json(r.results || [], 200, origin);
       }
 
-      // PATCH /api/club/jugadores/:id/avatar — actualizar avatar
-      if (path.match(/^\/api\/club\/jugadores\/\d+\/avatar$/) && request.method === 'PATCH') {
-        const id = path.split('/')[4];
-        const { avatar_id } = await request.json();
-        await env.CLUB_DB.prepare(
-          'UPDATE jugadores SET avatar_id = ? WHERE id = ?'
-        ).bind(avatar_id, id).run();
-        return json({ ok: true }, 200, origin);
-      }
+      // PATCH avatar — pendiente hasta tener tabla de perfiles en DB
+      // if (path.match(/^\/api\/club\/jugadores\/\d+\/avatar$/) && request.method === 'PATCH') { ... }
 
-      // ══════════════════════════════════════════════════════════
-      // RUTAS /api/* — tpc-fifa18 D1 (existentes sin cambios)
-      // ══════════════════════════════════════════════════════════
+      // ══════════════════════════════════════════════════════
+      // RUTAS /api/* — tpc-fifa18 D1
+      // ══════════════════════════════════════════════════════
 
       if (path === '/api/estado' && request.method === 'GET') {
         const temp = await env.DB.prepare(
@@ -125,9 +268,9 @@ export default {
 
         return json({
           temporadaId,
-          players:     (jugs.results  || []).map(j => j.nombre),
+          players:      (jugs.results  || []).map(j => j.nombre),
           jugadoresMap: Object.fromEntries((jugs.results || []).map(j => [j.nombre, j.id])),
-          matches:     parts.results || [],
+          matches:      parts.results || [],
         }, 200, origin);
       }
 
@@ -184,6 +327,32 @@ export default {
         const ytUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${env.YOUTUBE_CHANNEL}&type=video&order=date&maxResults=1&key=${env.YOUTUBE_API_KEY}`;
         const res = await fetch(ytUrl);
         if (!res.ok) return json({ items: [] }, 200, origin);
+        return json(await res.json(), 200, origin);
+      }
+
+      if (path === '/api/scan' && request.method === 'POST') {
+        const { image_base64, media_type, team_list } = await request.json();
+        if (!image_base64 || !media_type) return err('Faltan parámetros', 400, origin);
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type':      'application/json',
+            'x-api-key':         env.ANTHROPIC_KEY,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model:      'claude-haiku-4-5-20251001',
+            max_tokens: 300,
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'image', source: { type: 'base64', media_type, data: image_base64 } },
+                { type: 'text', text: `Esta es la pantalla de resultado de un partido de FIFA 18. Identificá los dos equipos y los goles de cada uno. Luego encontrá el nombre MÁS PARECIDO de cada equipo en esta lista oficial de FIFA 18:\n\n${team_list}\n\nRespondé ÚNICAMENTE con este JSON:\n{"team1_raw":"...","team1_match":"...","goals1":0,"team2_raw":"...","team2_match":"...","goals2":0}` }
+              ]
+            }]
+          })
+        });
+        if (!res.ok) { const e = await res.json(); return err(e.error?.message || 'Anthropic error', res.status, origin); }
         return json(await res.json(), 200, origin);
       }
 

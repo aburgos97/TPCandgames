@@ -708,19 +708,29 @@ let state    = { jugadores:[], juegos:[], badges:[], rankings:[], jugador_badges
 function transformData(data) {
   state = data;
 
-  // Construir PLAYERS con stats de FIFA
+  // Construir PLAYERS — stats agregadas de todos los juegos activos
   PLAYERS = data.jugadores.map(j => {
-    const rank = data.rankings.find(r => r.jugador_id === j.id && r.juego_id === 1);
+    // Suma rankings de todos los juegos del jugador
+    const allRanks = data.rankings.filter(r => r.jugador_id === j.id);
+    const rank1    = allRanks.find(r => r.juego_id === 1); // FIFA 18 como principal
+    const totals   = allRanks.reduce((acc, r) => ({
+      pj: acc.pj + (r.partidos  || 0),
+      w:  acc.w  + (r.victorias || 0),
+      d:  acc.d  + (r.empates   || 0),
+      l:  acc.l  + (r.derrotas  || 0),
+      gf: acc.gf + (r.gf        || 0),
+      gc: acc.gc + (r.gc        || 0),
+    }), { pj:0, w:0, d:0, l:0, gf:0, gc:0 });
+
     return {
-      id:  j.id,
-      nick: j.nickname,
-      em:  j.avatar_emoji || '🌿',
-      cp:  j.cogopoints || 0,
-      bio: j.bio || '',
-      pj:  rank?.partidos || 0,
-      avg: rank?.puntos   || 0,
-      // Victorias/empates/derrotas no están en CLUB_DB, se calculan desde FIFA si se necesitan
-      w: 0, d: 0, l: 0,
+      id:    j.id,
+      nick:  j.nickname,
+      em:    j.avatar_emoji || '🌿',
+      cp:    j.cogopoints   || 0,
+      bio:   j.bio          || '',
+      avg:   rank1?.puntos  || 0,   // promedio pts/partido en juego principal
+      racha: rank1?.racha   || 0,
+      ...totals,
     };
   });
 
@@ -893,12 +903,16 @@ function openPerfil(id) {
         <span class="pf-rank-lbl">Promedio FIFA 18</span>
       </div>
     </div>
-    <div class="pf-stats-title">Estadísticas</div>
+    <div class="pf-stats-title">Estadísticas FIFA 18</div>
     <div class="pf-stats-grid">
       <div class="pf-stat"><span class="pf-stat-val">${p.pj}</span><span class="pf-stat-lbl">Partidos</span></div>
       <div class="pf-stat"><span class="pf-stat-val">${p.w}</span><span class="pf-stat-lbl">Victorias</span></div>
       <div class="pf-stat"><span class="pf-stat-val">${p.d}</span><span class="pf-stat-lbl">Empates</span></div>
       <div class="pf-stat"><span class="pf-stat-val">${p.l}</span><span class="pf-stat-lbl">Derrotas</span></div>
+      <div class="pf-stat"><span class="pf-stat-val">${p.gf}</span><span class="pf-stat-lbl">Goles a favor</span></div>
+      <div class="pf-stat"><span class="pf-stat-val">${p.gc}</span><span class="pf-stat-lbl">Goles en contra</span></div>
+      <div class="pf-stat"><span class="pf-stat-val">${p.gf - p.gc > 0 ? '+' : ''}${p.gf - p.gc}</span><span class="pf-stat-lbl">Diferencia</span></div>
+      <div class="pf-stat"><span class="pf-stat-val">${p.racha > 0 ? '🔥' + p.racha : p.racha}</span><span class="pf-stat-lbl">Racha actual</span></div>
     </div>
   `;
 
