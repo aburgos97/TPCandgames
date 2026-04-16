@@ -1,5 +1,5 @@
 name            = "tpc-worker"
-main            = "worker.js"
+main            = "index.js"
 compatibility_date = "2026-01-01"
 account_id      = "44f2a800b6fd10b13b16855dcd28555c"
 

@@ -25,8 +25,15 @@ const ALLOWED_ORIGINS = [
   'http://127.0.0.1:5500',
 ];
 
+function isAllowedOrigin(origin) {
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  // Permite cualquier preview deploy de Cloudflare Pages del proyecto
+  if (origin.endsWith('.tpcandgames.pages.dev')) return true;
+  return false;
+}
+
 function corsHeaders(origin) {
-  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const allowed = isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
     'Access-Control-Allow-Origin':  allowed,
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, PATCH, OPTIONS',
