@@ -222,9 +222,12 @@ footer{
 
 /* El video ocupa todo el panel derecho */
 .s1-video{
+  position:absolute;
+  inset:0;
   width:100%;
   height:100%;
   object-fit:cover;
+  object-position:center;
   /* mix-blend-mode: multiply elimina el fondo blanco/claro
      del video fundiéndolo con el fondo oscuro del hero */
   mix-blend-mode:multiply;
@@ -236,6 +239,7 @@ footer{
 .s1-video-overlay{
   position:absolute;
   inset:0;
+  z-index:2;
   background:linear-gradient(
     135deg,
     rgba(30,15,9,.15) 0%,
@@ -268,11 +272,21 @@ footer{
   pointer-events:none;
 }
 
-/* Mobile: video al fondo, muy tenue, texto encima */
+/* Mobile: ocultar video (iOS lo maneja mal en background), usar imagen poster */
 @media(max-width:768px){
-  .s1-video-wrap{width:100%;opacity:.2;z-index:0}
-  .s1-video-wrap::before{width:75%}
-  .s1-video{object-position:center center}
+  .s1-video-wrap{display:none}
+
+  .s1{
+    background-image:url("../assets/videos/product-showcase.jpg");
+    background-size:cover;
+    background-position:center;
+  }
+
+  /* Overlay más denso en mobile para que el texto sea siempre legible */
+  .s1::after{
+    background:linear-gradient(180deg,
+      rgba(30,15,9,.97) 0%,rgba(30,15,9,.75) 55%,rgba(30,15,9,.55) 100%);
+  }
 }
 
 .torneos-section {
@@ -300,3 +314,13 @@ footer{
 .torneo-name { font-size: 15px; font-weight: 700; color: #f8f8f8; }
 .torneo-estado { font-size: 11px; color: rgba(248,248,248,.5); margin-top: 2px; }
 .torneo-arrow { font-size: 1.4rem; color: rgba(248,248,248,.3); }
+
+/* ── ACCESIBILIDAD: movimiento reducido ── */
+@media(prefers-reduced-motion:reduce){
+  .s1-video{display:none !important}
+  .s1{
+    background-image:url("../assets/videos/product-showcase.jpg");
+    background-size:cover;
+    background-position:center;
+  }
+}
