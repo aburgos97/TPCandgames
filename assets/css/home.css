@@ -210,70 +210,69 @@ footer{
   footer{justify-content:center;text-align:center}
 }
 
-/* ── BOLSAS HERO ── */
-.s1-bags{
+/* ── VIDEO SHOWCASE HERO ── */
+.s1-video-wrap{
   position:absolute;
   right:0;top:0;bottom:0;
-  width:55%;
-  display:flex;
-  align-items:flex-end;
-  justify-content:center;
-  gap:0;
-  pointer-events:none;
+  width:62%;
   z-index:1;
-  padding-bottom:0;
+  pointer-events:none;
+  overflow:hidden;
 }
-.bag{
-  flex:1;
-  display:flex;
-  align-items:flex-end;
-  justify-content:center;
-  transition:transform .4s cubic-bezier(.34,1.56,.64,1);
-  max-width:200px;
-}
-.bag img{
+
+/* El video ocupa todo el panel derecho */
+.s1-video{
   width:100%;
-  max-width:200px;
-  object-fit:contain;
-  filter:drop-shadow(-8px 16px 24px rgba(0,0,0,.7));
-  transition:filter .3s;
+  height:100%;
+  object-fit:cover;
+  /* mix-blend-mode: multiply elimina el fondo blanco/claro
+     del video fundiéndolo con el fondo oscuro del hero */
+  mix-blend-mode:multiply;
+  opacity:.95;
+  display:block;
 }
-/* Las bolsas de los lados ligeramente más bajas, la central más alta */
-.bag:nth-child(1){
-  transform:rotate(6deg) translateY(8%);
-  transform-origin:bottom center;
+
+/* Overlay de color: da el tinte terracota que une el video con la paleta */
+.s1-video-overlay{
+  position:absolute;
+  inset:0;
+  background:linear-gradient(
+    135deg,
+    rgba(30,15,9,.15) 0%,
+    rgba(110,49,44,.08) 50%,
+    transparent 100%
+  );
+  mix-blend-mode:color;
+  pointer-events:none;
 }
-.bag:nth-child(2){
-  transform:translateY(0);
-  z-index:2;
-}
-.bag:nth-child(3){
-  transform:rotate(-6deg) translateY(8%);
-  transform-origin:bottom center;
-}
-/* Degradado que funde las bolsas con el fondo desde la izquierda */
-.s1-bags::before{
+
+/* Fade izquierdo: funde el video con el contenido de texto */
+.s1-video-wrap::before{
   content:'';
   position:absolute;
   top:0;left:0;bottom:0;
-  width:40%;
-  background:linear-gradient(to right, var(--bg) 0%, transparent 100%);
+  width:45%;
+  background:linear-gradient(to right, var(--bg) 0%, rgba(30,15,9,.6) 50%, transparent 100%);
   z-index:3;
   pointer-events:none;
 }
-/* Degradado inferior para que las bolsas "salgan" del piso */
-.s1-bags::after{
+
+/* Fade inferior: el video "nace" del piso */
+.s1-video-wrap::after{
   content:'';
   position:absolute;
   bottom:0;left:0;right:0;
-  height:15%;
+  height:22%;
   background:linear-gradient(to top, var(--bg) 0%, transparent 100%);
   z-index:3;
   pointer-events:none;
 }
+
+/* Mobile: video al fondo, muy tenue, texto encima */
 @media(max-width:768px){
-  .s1-bags{width:100%;opacity:.18;z-index:0}
-  .s1-bags::before{width:70%}
+  .s1-video-wrap{width:100%;opacity:.2;z-index:0}
+  .s1-video-wrap::before{width:75%}
+  .s1-video{object-position:center center}
 }
 
 .torneos-section {
