@@ -10,6 +10,10 @@ let BADGES   = {};
 let ranked   = [];
 let state    = { jugadores:[], juegos:[], badges:[], rankings:[], jugador_badges:[] };
 
+// Cache de matches FIFA18 para el historial de jugadores
+let _matchesCache  = null;
+let _currentProfileId = null;
+
 // Tendencias de posición — se pueblan cuando haya histórico de rankings
 // Por ahora vacíos: no muestra flechas ↑↓ hasta tener comparación de sesiones
 const trends   = {};   // { [rankPos]: '▲' | '▼' }
@@ -191,6 +195,7 @@ function renderLB() {
 function openPerfil(id) {
   const p = PLAYERS.find(x => x.id === id);
   if (!p) return;
+  _currentProfileId = id;
   const pos = ranked.findIndex(x => x.id === id) + 1;
   const badges = BADGES[id] || [];
 
@@ -241,23 +246,25 @@ function openPerfil(id) {
   // ── Logros FIFA 18 ──────────────────────────────────
   // Definición completa de todos los logros posibles
   const LOGROS_DEF = [
-    // Rareza: legendario
-    { id:'fundador',      icono:'🌿', nombre:'Miembro Fundador',     desc:'Socio fundador del Pot Club',              rareza:'legendario', cond: j => true },
-    { id:'campeon',       icono:'👑', nombre:'Campeón',              desc:'Llegó al #1 del ranking',                  rareza:'legendario', cond: j => pos === 1 },
-    // Rareza: épico
-    { id:'veterano',      icono:'🎖️', nombre:'Veterano',            desc:'Jugó 15 o más partidos',                   rareza:'epico',      cond: j => j.pj >= 15 },
-    { id:'invicto',       icono:'🛡️', nombre:'Invicto',             desc:'Temporada sin perder ningún partido',       rareza:'epico',      cond: j => j.pj >= 5 && j.l === 0 },
-    { id:'upset_king',    icono:'💥', nombre:'Upset King',           desc:'Ganó siendo el equipo con menos estrellas', rareza:'epico',      cond: j => (BADGES[id]||[]).some(b=>b.n==='Upset King') },
-    // Rareza: raro
-    { id:'primer_gol',    icono:'⚽', nombre:'Primer Gol',           desc:'Cargó su primer partido al torneo',         rareza:'raro',       cond: j => j.pj >= 1 },
-    { id:'goleador',      icono:'🔥', nombre:'Goleador',             desc:'Marcó 5 o más goles en un partido',         rareza:'raro',       cond: j => (BADGES[id]||[]).some(b=>b.n==='Goleador') },
-    { id:'racha',         icono:'⚡', nombre:'En Racha',             desc:'Ganó 3 partidos consecutivos',              rareza:'raro',       cond: j => j.w >= 3 },
-    { id:'resistente',    icono:'💪', nombre:'Resistente',           desc:'Jugó 10 o más partidos',                   rareza:'raro',       cond: j => j.pj >= 10 },
-    // Rareza: común
-    { id:'debut',         icono:'🎮', nombre:'Debut',                desc:'Jugó su primer partido del torneo',         rareza:'comun',      cond: j => j.pj >= 1 },
-    { id:'constante',     icono:'📅', nombre:'Constante',            desc:'Jugó 5 o más partidos',                    rareza:'comun',      cond: j => j.pj >= 5 },
-    { id:'empate_artist', icono:'🤝', nombre:'Rey del Empate',       desc:'Empató 3 o más partidos',                  rareza:'comun',      cond: j => j.d >= 3 },
-    { id:'positivo',      icono:'📈', nombre:'Balance Positivo',     desc:'Más victorias que derrotas',               rareza:'comun',      cond: j => j.pj >= 3 && j.w > j.l },
+    // ── LEGENDARIO ──────────────────────────────────────────────
+    { id:'fundador',      icono:'🌿', nombre:'Miembro Fundador',    desc:'Socio fundador del Pot Club',                   rareza:'legendario', cond: j => true },
+    { id:'campeon',       icono:'👑', nombre:'Campeón',             desc:'Llegó al #1 del ranking general',               rareza:'legendario', cond: j => pos === 1 },
+    { id:'racha_leg',     icono:'💫', nombre:'Racha Legendaria',    desc:'Racha activa de 10 victorias consecutivas',      rareza:'legendario', cond: j => j.racha >= 10 },
+    // ── ÉPICO ────────────────────────────────────────────────────
+    { id:'veterano',      icono:'🎖️', nombre:'Veterano',           desc:'Jugó 15 o más partidos en el torneo',           rareza:'epico',      cond: j => j.pj >= 15 },
+    { id:'invicto',       icono:'🛡️', nombre:'Invicto',            desc:'5 o más partidos jugados sin perder ninguno',    rareza:'epico',      cond: j => j.pj >= 5 && j.l === 0 },
+    { id:'racha_epic',    icono:'⚡', nombre:'Racha Imparable',     desc:'Racha activa de 5 victorias consecutivas',       rareza:'epico',      cond: j => j.racha >= 5 },
+    { id:'upset_king',    icono:'💥', nombre:'Upset King',          desc:'Ganó siendo el equipo con menos estrellas',      rareza:'epico',      cond: j => (BADGES[id]||[]).some(b=>b.n==='Upset King') },
+    // ── RARO ─────────────────────────────────────────────────────
+    { id:'racha_raro',    icono:'🔥', nombre:'En Racha',            desc:'Racha activa de 3 victorias consecutivas',       rareza:'raro',       cond: j => j.racha >= 3 },
+    { id:'resistente',    icono:'💪', nombre:'Resistente',          desc:'Jugó 10 o más partidos en el torneo',            rareza:'raro',       cond: j => j.pj >= 10 },
+    { id:'artillero',     icono:'🎯', nombre:'Artillero',           desc:'Anotó 30 o más goles en el torneo',              rareza:'raro',       cond: j => j.gf >= 30 },
+    { id:'goleador',      icono:'⚽', nombre:'Goleador',            desc:'Marcó 5 o más goles en un solo partido',         rareza:'raro',       cond: j => (BADGES[id]||[]).some(b=>b.n==='Goleador') },
+    // ── COMÚN ────────────────────────────────────────────────────
+    { id:'debut',         icono:'🎮', nombre:'Debut',               desc:'Jugó su primer partido del torneo',              rareza:'comun',      cond: j => j.pj >= 1 },
+    { id:'primera_vic',   icono:'🏅', nombre:'Primera Sangre',      desc:'Consiguió su primera victoria en el torneo',     rareza:'comun',      cond: j => j.w >= 1 },
+    { id:'positivo',      icono:'📈', nombre:'Balance Positivo',    desc:'Más victorias que derrotas en el torneo',        rareza:'comun',      cond: j => j.pj >= 3 && j.w > j.l },
+    { id:'empate_artist', icono:'🤝', nombre:'Rey del Empate',      desc:'Empató 3 o más partidos en el torneo',           rareza:'comun',      cond: j => j.d >= 3 },
   ];
 
   const RAREZA_ORDEN = { legendario:0, epico:1, raro:2, comun:3 };
@@ -327,6 +334,7 @@ function pfTab(btn, paneId) {
   btn.closest('.screen').querySelectorAll('.pf-tab-pane').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById(paneId).classList.add('active');
+  if (paneId === 'pf-history') renderHistorial();
 }
 
 const AVATARS = [
@@ -431,6 +439,76 @@ function confirmAvatar(playerId) {
 function closeAvatarModal() {
   document.getElementById('avatar-modal-overlay')?.remove();
   tempSelectedAvatar = null;
+}
+
+// ══════════════════════════════════════════════════════
+// HISTORIAL DE PARTIDOS POR JUGADOR
+// ══════════════════════════════════════════════════════
+async function renderHistorial() {
+  const el = document.getElementById('pf-history');
+  if (!el) return;
+
+  const p = PLAYERS.find(x => x.id === _currentProfileId);
+  if (!p) return;
+
+  el.innerHTML = '<div class="hist-loading">⏳ Cargando historial...</div>';
+
+  try {
+    if (!_matchesCache) {
+      const data = await fetch(`${WORKER_URL}/api/estado`).then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      });
+      _matchesCache = data.matches || [];
+    }
+
+    // Filtrar partidos del jugador y mostrar del más reciente al más antiguo
+    const playerMatches = [..._matchesCache]
+      .filter(m => m.p1 === p.nick || m.p2 === p.nick)
+      .reverse();
+
+    if (!playerMatches.length) {
+      el.innerHTML = '<div class="hist-empty">Sin partidos registrados aún</div>';
+      return;
+    }
+
+    const cards = playerMatches.map(m => {
+      const isP1   = m.p1 === p.nick;
+      const myGol  = isP1 ? m.g1 : m.g2;
+      const oppGol = isP1 ? m.g2 : m.g1;
+      const oppNick = isP1 ? m.p2 : m.p1;
+      const myTeam  = isP1 ? m.t1 : m.t2;
+      const oppTeam = isP1 ? m.t2 : m.t1;
+      const myPts   = isP1 ? m.pts1 : m.pts2;
+      const res     = myGol > oppGol ? 'win' : myGol < oppGol ? 'loss' : 'draw';
+      const resLbl  = res === 'win' ? 'V' : res === 'loss' ? 'D' : 'E';
+      const date    = new Date(m.date).toLocaleDateString('es-AR');
+
+      return `
+        <div class="hist-card hist-card-${res}">
+          <div class="hist-badge hist-badge-${res}">${resLbl}</div>
+          <div class="hist-info">
+            <div class="hist-score">${myGol} <span class="hist-dash">—</span> ${oppGol}</div>
+            <div class="hist-opp">vs <strong>${oppNick}</strong></div>
+            ${myTeam ? `<div class="hist-teams">${myTeam}${oppTeam ? ' · ' + oppTeam : ''}</div>` : ''}
+          </div>
+          <div class="hist-meta">
+            <div class="hist-date">${date}</div>
+            <div class="hist-pts">+${myPts} pts</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="hist-header">
+        <span>⚽ FIFA 18</span>
+        <span>${playerMatches.length} partido${playerMatches.length !== 1 ? 's' : ''}</span>
+      </div>
+      ${cards}
+    `;
+  } catch(e) {
+    el.innerHTML = '<div class="hist-empty" style="color:rgba(186,120,101,.5)">No se pudo cargar el historial</div>';
+  }
 }
 
 // Init — conecta al worker real

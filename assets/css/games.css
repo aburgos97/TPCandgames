@@ -462,6 +462,68 @@ html, body {
 
 
 /* ══════════════════════════════════════════════
+   HISTORIAL DE PARTIDOS
+══════════════════════════════════════════════ */
+.hist-header {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: rgba(186,120,101,.55);
+  margin-bottom: 14px; padding-bottom: 8px;
+  border-bottom: 1px solid rgba(186,120,101,.12);
+}
+
+.hist-loading, .hist-empty {
+  text-align: center; padding: 40px 20px;
+  color: rgba(248,248,248,.3); font-size: 13px; font-weight: 500;
+}
+
+.hist-card {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(186,120,101,.06);
+  border: 1px solid rgba(186,120,101,.12);
+  border-radius: 14px; padding: 12px 14px;
+  margin-bottom: 8px;
+  transition: background .15s;
+}
+.hist-card-win  { border-left: 3px solid rgba(0,230,118,.4); }
+.hist-card-loss { border-left: 3px solid rgba(255,82,82,.35); }
+.hist-card-draw { border-left: 3px solid rgba(255,171,64,.3); }
+
+.hist-badge {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800;
+}
+.hist-badge-win  { background: rgba(0,230,118,.15);  color: #00e676; }
+.hist-badge-loss { background: rgba(255,82,82,.15);  color: #ff5252; }
+.hist-badge-draw { background: rgba(255,171,64,.15); color: #ffab40; }
+
+.hist-info { flex: 1; min-width: 0; }
+.hist-score {
+  font-size: 20px; font-weight: 800; line-height: 1;
+  background: linear-gradient(135deg, #BA7865, #e8c4a8);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hist-dash { font-size: 16px; opacity: .5; }
+.hist-opp {
+  font-size: 12px; font-weight: 500; color: rgba(248,248,248,.7);
+  margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hist-opp strong { color: #f8f8f8; font-weight: 700; }
+.hist-teams {
+  font-size: 10px; color: rgba(248,248,248,.3); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.hist-meta { text-align: right; flex-shrink: 0; }
+.hist-date { font-size: 10px; color: rgba(248,248,248,.3); font-weight: 500; }
+.hist-pts  {
+  font-size: 11px; font-weight: 700; color: rgba(186,120,101,.7);
+  margin-top: 3px; letter-spacing: .5px;
+}
+
+/* ══════════════════════════════════════════════
    MODAL SELECTOR DE AVATAR
 ══════════════════════════════════════════════ */
 .avatar-modal-overlay {
