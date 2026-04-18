@@ -66,10 +66,18 @@ function transformData(data) {
 async function init() {
   showLoading(true);
   try {
-    const res  = await fetch(`${WORKER_URL}/api/club/estado`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    // Carga estado del club y partidos de FIFA18 en paralelo
+    const [clubRes, fifaRes] = await Promise.all([
+      fetch(`${WORKER_URL}/api/club/estado`),
+      fetch(`${WORKER_URL}/api/estado`),
+    ]);
+    if (!clubRes.ok) throw new Error(`HTTP ${clubRes.status}`);
+    const data = await clubRes.json();
     transformData(data);
+    if (fifaRes.ok) {
+      const fifaData = await fifaRes.json();
+      _matchesCache = fifaData.matches || [];
+    }
   } catch(e) {
     console.warn('Worker no disponible, usando datos demo:', e.message);
     loadDemoData();
@@ -190,6 +198,29 @@ function renderLB() {
 }
 
 // ══════════════════════════════════════════════════════
+// HELPERS DE ESTADÍSTICAS
+// ══════════════════════════════════════════════════════
+
+// Racha invicta actual: cuenta partidos consecutivos sin perder
+// (victorias Y empates) recorriendo desde el más reciente hacia atrás
+function computeRachaInvicto(nick) {
+  if (!_matchesCache || !_matchesCache.length) return 0;
+  const playerMatches = [..._matchesCache]
+    .filter(m => m.p1 === nick || m.p2 === nick)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  let racha = 0;
+  for (let i = playerMatches.length - 1; i >= 0; i--) {
+    const m = playerMatches[i];
+    const isP1  = m.p1 === nick;
+    const myGol = isP1 ? m.g1 : m.g2;
+    const rivGol = isP1 ? m.g2 : m.g1;
+    if (myGol >= rivGol) racha++; // V o E → sigue invicto
+    else break;                   // D → fin de racha
+  }
+  return racha;
+}
+
+// ══════════════════════════════════════════════════════
 // RENDER PROFILE
 // ══════════════════════════════════════════════════════
 function openPerfil(id) {
@@ -244,27 +275,38 @@ function openPerfil(id) {
   `;
 
   // ── Logros FIFA 18 ──────────────────────────────────
+  // Racha invicta calculada desde el historial real de partidos
+  const rachaInvicto = computeRachaInvicto(p.nick);
+
+  // Valla menos invicta: menor promedio de GC entre jugadores con 5+ PJ
+  const elegibles = PLAYERS.filter(pl => pl.pj >= 5);
+  const mejorPromGC = elegibles.length
+    ? Math.min(...elegibles.map(pl => pl.gc / pl.pj))
+    : Infinity;
+  const esValla = p.pj >= 5 && (p.gc / p.pj) <= mejorPromGC + 0.001;
+
   // Definición completa de todos los logros posibles
   const LOGROS_DEF = [
     // ── LEGENDARIO ──────────────────────────────────────────────
-    { id:'fundador',      icono:'🌿', nombre:'Miembro Fundador',    desc:'Socio fundador del Pot Club',                   rareza:'legendario', cond: j => true },
-    { id:'campeon',       icono:'👑', nombre:'Campeón',             desc:'Llegó al #1 del ranking general',               rareza:'legendario', cond: j => pos === 1 },
-    { id:'racha_leg',     icono:'💫', nombre:'Racha Legendaria',    desc:'Racha activa de 10 victorias consecutivas',      rareza:'legendario', cond: j => j.racha >= 10 },
+    { id:'fundador',      icono:'🌿', nombre:'Miembro Fundador',     desc:'Socio fundador del Pot Club',                         rareza:'legendario', cond: j => true },
+    { id:'campeon',       icono:'👑', nombre:'Campeón',              desc:'Llegó al #1 del ranking general',                     rareza:'legendario', cond: j => pos === 1 },
+    { id:'racha_leg',     icono:'💫', nombre:'Racha Legendaria',     desc:'10 partidos consecutivos sin perder',                  rareza:'legendario', cond: j => rachaInvicto >= 10 },
     // ── ÉPICO ────────────────────────────────────────────────────
-    { id:'veterano',      icono:'🎖️', nombre:'Veterano',           desc:'Jugó 15 o más partidos en el torneo',           rareza:'epico',      cond: j => j.pj >= 15 },
-    { id:'invicto',       icono:'🛡️', nombre:'Invicto',            desc:'5 o más partidos jugados sin perder ninguno',    rareza:'epico',      cond: j => j.pj >= 5 && j.l === 0 },
-    { id:'racha_epic',    icono:'⚡', nombre:'Racha Imparable',     desc:'Racha activa de 5 victorias consecutivas',       rareza:'epico',      cond: j => j.racha >= 5 },
-    { id:'upset_king',    icono:'💥', nombre:'Upset King',          desc:'Ganó siendo el equipo con menos estrellas',      rareza:'epico',      cond: j => (BADGES[id]||[]).some(b=>b.n==='Upset King') },
+    { id:'veterano',      icono:'🎖️', nombre:'Veterano',            desc:'Jugó 15 o más partidos en el torneo',                 rareza:'epico',      cond: j => j.pj >= 15 },
+    { id:'invicto',       icono:'🛡️', nombre:'Invicto',             desc:'5 o más partidos sin perder ninguno en la temporada',  rareza:'epico',      cond: j => j.pj >= 5 && j.l === 0 },
+    { id:'racha_epic',    icono:'⚡', nombre:'Racha Imparable',      desc:'5 partidos consecutivos sin perder',                   rareza:'epico',      cond: j => rachaInvicto >= 5 },
+    { id:'valla',         icono:'🧤', nombre:'Valla Menos Invicta',  desc:'Menor promedio de goles en contra de la temporada',    rareza:'epico',      cond: j => esValla },
+    { id:'upset_king',    icono:'💥', nombre:'Upset King',           desc:'Ganó siendo el equipo con menos estrellas',            rareza:'epico',      cond: j => (BADGES[id]||[]).some(b=>b.n==='Upset King') },
     // ── RARO ─────────────────────────────────────────────────────
-    { id:'racha_raro',    icono:'🔥', nombre:'En Racha',            desc:'Racha activa de 3 victorias consecutivas',       rareza:'raro',       cond: j => j.racha >= 3 },
-    { id:'resistente',    icono:'💪', nombre:'Resistente',          desc:'Jugó 10 o más partidos en el torneo',            rareza:'raro',       cond: j => j.pj >= 10 },
-    { id:'artillero',     icono:'🎯', nombre:'Artillero',           desc:'Anotó 30 o más goles en el torneo',              rareza:'raro',       cond: j => j.gf >= 30 },
-    { id:'goleador',      icono:'⚽', nombre:'Goleador',            desc:'Marcó 5 o más goles en un solo partido',         rareza:'raro',       cond: j => (BADGES[id]||[]).some(b=>b.n==='Goleador') },
+    { id:'racha_raro',    icono:'🔥', nombre:'En Racha',             desc:'3 partidos consecutivos sin perder',                   rareza:'raro',       cond: j => rachaInvicto >= 3 },
+    { id:'resistente',    icono:'💪', nombre:'Resistente',           desc:'Jugó 10 o más partidos en el torneo',                  rareza:'raro',       cond: j => j.pj >= 10 },
+    { id:'artillero',     icono:'🎯', nombre:'Artillero',            desc:'Anotó 30 o más goles en el torneo',                    rareza:'raro',       cond: j => j.gf >= 30 },
+    { id:'goleador',      icono:'⚽', nombre:'Goleador',             desc:'Marcó 5 o más goles en un solo partido',               rareza:'raro',       cond: j => (BADGES[id]||[]).some(b=>b.n==='Goleador') },
     // ── COMÚN ────────────────────────────────────────────────────
-    { id:'debut',         icono:'🎮', nombre:'Debut',               desc:'Jugó su primer partido del torneo',              rareza:'comun',      cond: j => j.pj >= 1 },
-    { id:'primera_vic',   icono:'🏅', nombre:'Primera Sangre',      desc:'Consiguió su primera victoria en el torneo',     rareza:'comun',      cond: j => j.w >= 1 },
-    { id:'positivo',      icono:'📈', nombre:'Balance Positivo',    desc:'Más victorias que derrotas en el torneo',        rareza:'comun',      cond: j => j.pj >= 3 && j.w > j.l },
-    { id:'empate_artist', icono:'🤝', nombre:'Rey del Empate',      desc:'Empató 3 o más partidos en el torneo',           rareza:'comun',      cond: j => j.d >= 3 },
+    { id:'debut',         icono:'🎮', nombre:'Debut',                desc:'Jugó su primer partido del torneo',                    rareza:'comun',      cond: j => j.pj >= 1 },
+    { id:'primera_vic',   icono:'🏅', nombre:'Primera Sangre',       desc:'Consiguió su primera victoria en el torneo',           rareza:'comun',      cond: j => j.w >= 1 },
+    { id:'positivo',      icono:'📈', nombre:'Balance Positivo',     desc:'Más victorias que derrotas en el torneo',              rareza:'comun',      cond: j => j.pj >= 3 && j.w > j.l },
+    { id:'empate_artist', icono:'🤝', nombre:'Rey del Empate',       desc:'Empató 3 o más partidos en el torneo',                 rareza:'comun',      cond: j => j.d >= 3 },
   ];
 
   const RAREZA_ORDEN = { legendario:0, epico:1, raro:2, comun:3 };
