@@ -684,6 +684,42 @@ html, body {
 
 
 /* ══════════════════════════════════════════════════
+   TORNEOS VIGENTES
+══════════════════════════════════════════════════ */
+.torneos-section {
+  padding: 24px 18px 40px;
+  border-top: 1px solid rgba(186,120,101,.1);
+}
+.torneos-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: rgba(186,120,101,.6);
+  margin-bottom: 12px;
+  font-family: 'Montserrat', sans-serif;
+}
+.torneo-card {
+  display: flex; align-items: center; gap: 14px;
+  background: rgba(186,120,101,.07);
+  border: 1px solid rgba(186,120,101,.18);
+  border-radius: 12px; padding: 14px 16px;
+  cursor: pointer; transition: background .15s, border-color .15s;
+}
+.torneo-card:hover {
+  background: rgba(186,120,101,.13);
+  border-color: rgba(186,120,101,.38);
+}
+.torneo-icon { font-size: 1.8rem; flex-shrink: 0; }
+.torneo-info { flex: 1; min-width: 0; }
+.torneo-name {
+  font-size: 14px; font-weight: 700; color: #f8f8f8;
+  font-family: 'Montserrat', sans-serif;
+}
+.torneo-estado {
+  font-size: 11px; color: rgba(248,248,248,.45);
+  margin-top: 2px; font-family: 'Montserrat', sans-serif;
+}
+.torneo-arrow { font-size: 1.3rem; color: rgba(248,248,248,.28); flex-shrink: 0; }
+
+/* ══════════════════════════════════════════════════
    BREAKPOINT: 1400px — MONITORES GRANDES
    El contenedor ya está en max-width: 1400px,
    este bloque sólo añade pequeños refinamientos

@@ -289,32 +289,6 @@ footer{
   }
 }
 
-.torneos-section {
-  max-width: 430px; margin: 0 auto;
-  padding: 24px 18px 40px;
-}
-.torneos-title {
-  font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
-  text-transform: uppercase; color: rgba(186,120,101,.7);
-  margin-bottom: 14px;
-}
-.torneo-card {
-  display: flex; align-items: center; gap: 14px;
-  background: rgba(186,120,101,.08);
-  border: 1px solid rgba(186,120,101,.2);
-  border-radius: 16px; padding: 16px;
-  cursor: pointer; transition: background .15s, border-color .15s;
-}
-.torneo-card:hover {
-  background: rgba(186,120,101,.14);
-  border-color: rgba(186,120,101,.4);
-}
-.torneo-icon { font-size: 2rem; }
-.torneo-info { flex: 1; }
-.torneo-name { font-size: 15px; font-weight: 700; color: #f8f8f8; }
-.torneo-estado { font-size: 11px; color: rgba(248,248,248,.5); margin-top: 2px; }
-.torneo-arrow { font-size: 1.4rem; color: rgba(248,248,248,.3); }
-
 /* ── ACCESIBILIDAD: movimiento reducido ── */
 @media(prefers-reduced-motion:reduce){
   .s1-video{display:none !important}
