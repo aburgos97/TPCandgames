@@ -589,13 +589,13 @@ function _riotRankCard(title, entry, unavailable) {
   const rankStr  = `${entry.tier}${noNum ? '' : ' ' + entry.rank}`;
   const total    = entry.wins + entry.losses;
   const wr       = total > 0 ? Math.round(entry.wins / total * 100) : 0;
-  const tierName = entry.tier.charAt(0) + entry.tier.slice(1).toLowerCase();
-  const emblem   = `https://ddragon.leagueoflegends.com/cdn/img/ranked-emblems/Emblem_${tierName}.png`;
+  const tierLower = entry.tier.toLowerCase();
+  const emblem    = `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-mini-crests/${tierLower}.png`;
   return `
     <div class="riot-card">
       <div class="riot-game-title">${title}</div>
       <div class="riot-rank-row">
-        <img class="riot-emblem" src="${emblem}" alt="${tierName}" loading="lazy">
+        <img class="riot-emblem" src="${emblem}" alt="${tierLower}" loading="lazy">
         <div>
           <div class="riot-tier" style="color:${color}">${rankStr}</div>
           <div class="riot-lp">${entry.leaguePoints} LP</div>
