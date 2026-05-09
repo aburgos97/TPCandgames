@@ -852,3 +852,12 @@ html, body {
   font-size: 11px; color: rgba(248,248,248,.3);
   font-style: italic; margin-top: 4px;
 }
+
+.riot-refresh-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 10px; padding: 0 0 0 4px;
+  opacity: .45; vertical-align: middle;
+  transition: opacity .2s;
+}
+.riot-refresh-btn:hover  { opacity: 1; }
+.riot-refresh-btn:disabled { cursor: default; }

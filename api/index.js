@@ -513,6 +513,89 @@ export default {
         }
       }
 
+      // Refresca el TFT cache sin password: busca en el tier guardado + adyacentes.
+      if (path === '/api/riot/refresh-tft' && request.method === 'POST') {
+        const { gameName, tagLine } = await request.json();
+        if (!gameName || !tagLine) return err('gameName y tagLine requeridos', 400, origin);
+        if (!env.RIOT_API_KEY) return err('RIOT_API_KEY no configurada', 500, origin);
+
+        const riotHeaders = { 'X-Riot-Token': env.RIOT_API_KEY };
+        const accountRes = await fetch(
+          `https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`,
+          { headers: riotHeaders }
+        );
+        if (!accountRes.ok) return err('Cuenta Riot no encontrada', accountRes.status, origin);
+        const { puuid } = await accountRes.json();
+
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS riot_tft_cache (
+            puuid TEXT PRIMARY KEY, tier TEXT, rnk TEXT, lp INTEGER,
+            wins INTEGER, losses INTEGER, scanned_at TEXT DEFAULT (datetime('now'))
+          )
+        `).run();
+
+        const cached = await env.DB.prepare(
+          'SELECT tier, rnk FROM riot_tft_cache WHERE puuid = ?'
+        ).bind(puuid).first();
+
+        // Construye lista de tier/division a escanear: el guardado + adyacentes
+        const TIERS = ['IRON','BRONZE','SILVER','GOLD','PLATINUM','EMERALD','DIAMOND'];
+        const DIVS  = ['IV','III','II','I'];
+        const toScan = [];
+        if (cached?.tier && TIERS.includes(cached.tier)) {
+          const ti = TIERS.indexOf(cached.tier);
+          const di = DIVS.indexOf(cached.rnk);
+          // tier/div actual + uno arriba + uno abajo
+          const candidates = [
+            { t: cached.tier, d: cached.rnk },
+            di > 0             ? { t: cached.tier,     d: DIVS[di-1] } : { t: TIERS[ti+1] || cached.tier, d: 'IV' },
+            di < DIVS.length-1 ? { t: cached.tier,     d: DIVS[di+1] } : { t: TIERS[ti-1] || cached.tier, d: 'I'  },
+          ];
+          toScan.push(...candidates);
+          // Master/Grandmaster/Challenger si estaban en Diamond I
+          if (cached.tier === 'DIAMOND' && cached.rnk === 'I') {
+            toScan.push({ t: 'MASTER', d: 'I' });
+          }
+        } else {
+          // Sin cache: escanea los tiers más comunes
+          for (const t of ['PLATINUM','GOLD','EMERALD','SILVER','DIAMOND'])
+            for (const d of DIVS) toScan.push({ t, d });
+        }
+
+        let found = null;
+        outer: for (const { t, d } of toScan) {
+          for (let page = 1; page <= 30 && !found; page++) {
+            const res = await fetch(
+              `https://la2.api.riotgames.com/tft/league/v1/entries/${t}/${d}?page=${page}`,
+              { headers: riotHeaders }
+            );
+            if (!res.ok) break;
+            const entries = await res.json();
+            if (!entries.length) break;
+            const match = entries.find(e => e.puuid === puuid);
+            if (match) { found = match; break outer; }
+          }
+        }
+
+        if (found) {
+          await env.DB.prepare(`
+            INSERT OR REPLACE INTO riot_tft_cache (puuid, tier, rnk, lp, wins, losses, scanned_at)
+            VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+          `).bind(puuid, found.tier, found.rank, found.leaguePoints, found.wins, found.losses).run();
+        } else {
+          await env.DB.prepare(`
+            INSERT OR REPLACE INTO riot_tft_cache (puuid, tier, rnk, lp, wins, losses, scanned_at)
+            VALUES (?, NULL, NULL, NULL, NULL, NULL, datetime('now'))
+          `).bind(puuid).run();
+        }
+
+        const tftRanked = found
+          ? { tier: found.tier, rank: found.rank, leaguePoints: found.leaguePoints,
+              wins: found.wins, losses: found.losses, queueType: 'RANKED_TFT' }
+          : null;
+        return json({ ok: true, ranked: tftRanked }, 200, origin);
+      }
+
       if (path === '/api/youtube' && request.method === 'GET') {
         const ytUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${env.YOUTUBE_CHANNEL}&type=video&order=date&maxResults=20&key=${env.YOUTUBE_API_KEY}`;
         const res = await fetch(ytUrl);
