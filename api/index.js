@@ -421,16 +421,18 @@ export default {
         if (!accountRes.ok) return err('Cuenta de Riot no encontrada', accountRes.status, origin);
         const { puuid } = await accountRes.json();
 
-        const [lolRankRes, tftRankRes] = await Promise.all([
-          fetch(`https://la2.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`, { headers: riotHeaders }),
-          fetch(`https://la2.api.riotgames.com/tft/league/v1/entries/by-puuid/${puuid}`,  { headers: riotHeaders }),
-        ]);
+        // LoL: by-puuid OK en LA2. TFT: by-puuid no existe en LA2 (API no migrada aún).
+        // Para TFT usamos by-summoner via el LoL summonerId si lo hay (actualmente no retorna 'id').
+        // Fallback: marcamos tft.unavailable=true para que el cliente no muestre "Sin clasificar".
+        const lolRankRes = await fetch(
+          `https://la2.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`,
+          { headers: riotHeaders }
+        );
         const lolEntries = lolRankRes.ok ? await lolRankRes.json() : [];
-        const tftEntries = tftRankRes.ok ? await tftRankRes.json() : [];
 
         return json({
           lol: { soloq: lolEntries.find(e => e.queueType === 'RANKED_SOLO_5x5') || null },
-          tft: { ranked: tftEntries.find(e => e.queueType === 'RANKED_TFT')     || null },
+          tft: { ranked: null, unavailable: true },
         }, 200, origin);
       }
 

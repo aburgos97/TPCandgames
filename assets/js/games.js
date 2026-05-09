@@ -573,7 +573,12 @@ const RIOT_TIER_COLOR = {
   CHALLENGER: '#f4c874',
 };
 
-function _riotRankCard(title, entry) {
+function _riotRankCard(title, entry, unavailable) {
+  if (unavailable) return `
+    <div class="riot-card">
+      <div class="riot-game-title">${title}</div>
+      <div class="riot-unranked">No disponible</div>
+    </div>`;
   if (!entry) return `
     <div class="riot-card">
       <div class="riot-game-title">${title}</div>
@@ -609,8 +614,8 @@ async function fetchAndRenderRiot(playerId) {
     el.innerHTML = `
       <div class="pf-stats-title">Riot Games · ${account.gameName}#${account.tagLine}</div>
       <div class="riot-grid">
-        ${_riotRankCard('League of Legends · Solo/Q', lol?.soloq)}
-        ${_riotRankCard('TFT · Ranked', tft?.ranked)}
+        ${_riotRankCard('League of Legends · Solo/Q', lol?.soloq, false)}
+        ${_riotRankCard('TFT · Ranked', tft?.ranked, tft?.unavailable)}
       </div>`;
   } catch(e) {
     el.innerHTML = '<div class="riot-error">No se pudo cargar Riot</div>';
