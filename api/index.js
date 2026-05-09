@@ -421,19 +421,12 @@ export default {
         if (!accountRes.ok) return err('Cuenta de Riot no encontrada', accountRes.status, origin);
         const { puuid } = await accountRes.json();
 
-        const [lolSumRes, tftSumRes] = await Promise.all([
-          fetch(`https://la2.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`, { headers: riotHeaders }),
-          fetch(`https://la2.api.riotgames.com/tft/summoner/v4/summoners/by-puuid/${puuid}`, { headers: riotHeaders }),
-        ]);
-        const lolSum = lolSumRes.ok ? await lolSumRes.json() : null;
-        const tftSum = tftSumRes.ok ? await tftSumRes.json() : null;
-
         const [lolRankRes, tftRankRes] = await Promise.all([
-          lolSum ? fetch(`https://la2.api.riotgames.com/lol/league/v4/entries/by-summoner/${lolSum.id}`, { headers: riotHeaders }) : Promise.resolve(null),
-          tftSum ? fetch(`https://la2.api.riotgames.com/tft/league/v1/entries/by-summoner/${tftSum.id}`, { headers: riotHeaders }) : Promise.resolve(null),
+          fetch(`https://la2.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`, { headers: riotHeaders }),
+          fetch(`https://la2.api.riotgames.com/tft/league/v1/entries/by-puuid/${puuid}`,  { headers: riotHeaders }),
         ]);
-        const lolEntries = lolRankRes?.ok ? await lolRankRes.json() : [];
-        const tftEntries = tftRankRes?.ok ? await tftRankRes.json() : [];
+        const lolEntries = lolRankRes.ok ? await lolRankRes.json() : [];
+        const tftEntries = tftRankRes.ok ? await tftRankRes.json() : [];
 
         return json({
           lol: { soloq: lolEntries.find(e => e.queueType === 'RANKED_SOLO_5x5') || null },
