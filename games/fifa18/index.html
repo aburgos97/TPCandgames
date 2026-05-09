@@ -283,6 +283,7 @@ document.body.style.overflow = 'hidden';
         <div class="nav-tab active" data-page="dashboard">Ranking</div>
         <div class="nav-tab" data-page="puskas">Púskas <span style="background:var(--accent);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:.55rem;font-weight:900;letter-spacing:1.5px;padding:.1rem .35rem;border-radius:2px;margin-left:.3rem">NEW</span></div>
         <div class="nav-tab" data-page="historial">Historial</div>
+        <div class="nav-tab" data-page="stats">Estadísticas</div>
         <div class="nav-tab nav-dropdown-trigger" id="admin-trigger" onclick="toggleAdminMenu()">Admin ▾
           <div class="nav-dropdown" id="admin-menu">
             <div class="nav-dropdown-item" data-page="partidos">⚡ Cargar Partido</div>
@@ -497,6 +498,18 @@ document.body.style.overflow = 'hidden';
     </button>
   </div>
   <div id="all-matches" style="width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch"></div>
+</div>
+
+<!-- ═══ ESTADÍSTICAS ════════════════════════════════════════════════ -->
+<div id="page-stats" class="page">
+  <div class="section-header">
+    <div>
+      <div class="section-title">ESTADÍSTICAS <span class="acc">DEL TORNEO</span></div>
+      <div class="section-sub">Análisis detallado de la temporada</div>
+    </div>
+    <div class="section-rule"></div>
+  </div>
+  <div id="stats-page-content"></div>
 </div>
 
 <!-- ═══ EQUIPOS ═════════════════════════════════════════════════════ -->

@@ -869,7 +869,7 @@ document.querySelectorAll('.nav-tab').forEach(tab=>{
 
 function renderAll(){
   renderStats();renderLadder();renderRecentMatches();
-  renderPlayersList();renderAllMatches();renderTeamsPage();
+  renderPlayersList();renderAllMatches();renderTeamsPage();renderStatsPage();
   populatePlayerSelects();populateCountryLeagueFilters();
 }
 
@@ -1820,6 +1820,207 @@ async function deleteCustomTeam(id, nombre) {
       notify(`✅ ${nombre} eliminado`);
     } catch(e) { notify('❌ ' + e.message, true); }
   });
+}
+
+// ══════════════════════════════════════════════════════════════
+// SECCIÓN ESTADÍSTICAS
+// ══════════════════════════════════════════════════════════════
+let _activeStatSection = null;
+
+const STAT_SECTIONS = [
+  { id:'goleadores', icon:'⚽', label:'Goleadores' },
+  { id:'valla',      icon:'🧤', label:'Valla Menos Invicta' },
+  { id:'equipos',    icon:'🏟️', label:'Equipos Utilizados' },
+  { id:'cruces',     icon:'⚔️', label:'Cruces' },
+  { id:'goleadas',   icon:'💥', label:'Goleadas' },
+  { id:'handicap',   icon:'♟️', label:'Reyes del Handicap' },
+];
+
+function renderStatsPage() {
+  const el = document.getElementById('stats-page-content');
+  if (!el) return;
+
+  if (!state.matches.length) {
+    el.innerHTML = '<div class="empty-state"><span class="big">📊</span>Sin partidos para analizar</div>';
+    return;
+  }
+
+  const tabsHTML = STAT_SECTIONS.map(s => {
+    const on = _activeStatSection === s.id;
+    return `<button onclick="selectStatSection('${s.id}')"
+      style="font-family:'Barlow Condensed',sans-serif;font-size:.8rem;letter-spacing:1.5px;
+             text-transform:uppercase;padding:.5rem 1.1rem;border-radius:3px;cursor:pointer;
+             border:1px solid ${on ? 'var(--green)' : 'var(--border2)'};
+             background:${on ? 'rgba(0,200,83,.12)' : 'var(--surface)'};
+             color:${on ? 'var(--green)' : 'var(--gray)'};white-space:nowrap;
+             transition:all .15s">${s.icon} ${s.label}</button>`;
+  }).join('');
+
+  const contentHTML = _activeStatSection
+    ? buildStatSectionHTML(_activeStatSection)
+    : `<div style="color:var(--gray);font-family:'Barlow Condensed',sans-serif;font-size:.82rem;
+                   padding:.8rem 0;letter-spacing:1px">Seleccioná una sección para ver los datos.</div>`;
+
+  el.innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.5rem">${tabsHTML}</div>
+    <div id="stat-section-content">${contentHTML}</div>`;
+}
+
+function selectStatSection(id) {
+  _activeStatSection = id;
+  renderStatsPage();
+}
+
+function _buildPlayerStats() {
+  const pStats = {}, teamCount = {};
+  for (const m of state.matches) {
+    teamCount[m.t1] = (teamCount[m.t1] || 0) + 1;
+    teamCount[m.t2] = (teamCount[m.t2] || 0) + 1;
+    for (const [p, gf, gc, trSelf, trOpp] of [[m.p1,m.g1,m.g2,m.tr1,m.tr2],[m.p2,m.g2,m.g1,m.tr2,m.tr1]]) {
+      if (!pStats[p]) pStats[p] = { gf:0, gc:0, pj:0, goleadas:0, handicap:0 };
+      const s = pStats[p];
+      s.gf += gf; s.gc += gc; s.pj++;
+      if (gf - gc >= 3) s.goleadas++;
+      if (gf > gc && trOpp - trSelf >= 1.5) s.handicap++;
+    }
+  }
+  const players = Object.entries(pStats).map(([name, s]) => ({
+    name, ...s,
+    avgGf: s.pj ? +(s.gf / s.pj).toFixed(2) : 0,
+    avgGc: s.pj ? +(s.gc / s.pj).toFixed(2) : 0,
+  }));
+  return { players, teamCount };
+}
+
+function _sRow(rank, name, main, sub) {
+  const medal = ['🥇','🥈','🥉'][rank] || `<span style="color:var(--gray2)">${rank+1}</span>`;
+  return `<div style="display:flex;align-items:center;gap:.8rem;padding:.55rem 0;border-bottom:1px solid var(--border);font-family:'Barlow Condensed',sans-serif">
+    <span style="min-width:22px;text-align:center;font-size:.9rem">${medal}</span>
+    <span style="flex:1;color:var(--white);font-size:.9rem;font-weight:600">${name}</span>
+    <span style="color:var(--green);font-family:'Anton',sans-serif;font-size:1.1rem">${main}</span>
+    <span style="color:var(--gray);font-size:.72rem;min-width:72px;text-align:right">${sub}</span>
+  </div>`;
+}
+const _emptyMsg = txt => `<div style="color:var(--gray);font-family:'Barlow Condensed',sans-serif;font-size:.82rem;padding:.4rem 0">${txt}</div>`;
+
+function _sectionWrap(icon, title, sub, body) {
+  return `<div class="section-header"><div>
+    <div class="section-title" style="font-size:1.1rem">${icon} ${title}</div>
+    <div class="section-sub">${sub}</div>
+  </div><div class="section-rule"></div></div>
+  <div class="card" style="padding:1rem 1.2rem">${body}</div>`;
+}
+
+function buildStatSectionHTML(id) {
+  const { players, teamCount } = _buildPlayerStats();
+
+  if (id === 'goleadores') {
+    const rows = [...players].sort((a,b) => b.avgGf - a.avgGf)
+      .map((p,i) => _sRow(i, p.name, p.avgGf.toFixed(2), `${p.gf} goles · ${p.pj}PJ`)).join('');
+    return _sectionWrap('⚽','GOLEADORES','Promedio de goles anotados por partido', rows);
+  }
+
+  if (id === 'valla') {
+    const MIN_PJ = 3;
+    const list = [...players].filter(p => p.pj >= MIN_PJ).sort((a,b) => a.avgGc - b.avgGc);
+    const rows = list.length
+      ? list.map((p,i) => _sRow(i, p.name, p.avgGc.toFixed(2), `${p.gc} enc. · ${p.pj}PJ`)).join('')
+      : _emptyMsg(`Sin jugadores con ${MIN_PJ}+ partidos`);
+    return _sectionWrap('🧤','VALLA MENOS INVICTA',`Menos goles encajados por partido · mín. ${MIN_PJ}PJ`, rows);
+  }
+
+  if (id === 'equipos') {
+    const rows = Object.entries(teamCount)
+      .sort(([,a],[,b]) => b - a).slice(0, 12)
+      .map(([name, count], i) => {
+        const team = ALL_TEAMS.find(t => t.n === name);
+        const medal = ['🥇','🥈','🥉'][i] || `<span style="color:var(--gray2)">${i+1}</span>`;
+        return `<div style="display:flex;align-items:center;gap:.8rem;padding:.5rem 0;border-bottom:1px solid var(--border);font-family:'Barlow Condensed',sans-serif">
+          <span style="min-width:22px;text-align:center;font-size:.9rem">${medal}</span>
+          ${team ? tb(team) : ''}
+          <span style="flex:1;color:var(--white);font-size:.88rem">${name}</span>
+          <span style="color:var(--green);font-family:'Anton',sans-serif;font-size:1.1rem">${count}</span>
+          <span style="color:var(--gray);font-size:.72rem">veces</span>
+        </div>`;
+      }).join('');
+    return _sectionWrap('🏟️','EQUIPOS MÁS UTILIZADOS','Top 12 equipos más elegidos en el torneo', rows);
+  }
+
+  if (id === 'cruces') {
+    const playerOpts = state.players.map(p => `<option value="${p}">${p}</option>`).join('');
+    const body = `<div style="margin-bottom:1rem">
+      <label style="font-family:'Barlow Condensed',sans-serif;font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--gray);display:block;margin-bottom:.4rem">Seleccionar jugador</label>
+      <select id="cruces-select" onchange="renderCruces(this.value)" style="max-width:220px">
+        <option value="">— Elegir jugador —</option>${playerOpts}
+      </select>
+    </div>
+    <div id="cruces-body"></div>`;
+    return _sectionWrap('⚔️','CRUCES ENTRE JUGADORES','Historial de enfrentamientos directos', body);
+  }
+
+  if (id === 'goleadas') {
+    const list = [...players].filter(p => p.goleadas > 0).sort((a,b) => b.goleadas - a.goleadas);
+    const rows = list.length
+      ? list.map((p,i) => _sRow(i, p.name, p.goleadas, `de ${p.pj}PJ`)).join('')
+      : _emptyMsg('Sin goleadas registradas');
+    return _sectionWrap('💥','GOLEADAS','Victorias con 3+ goles de diferencia', rows);
+  }
+
+  if (id === 'handicap') {
+    const list = [...players].filter(p => p.handicap > 0).sort((a,b) => b.handicap - a.handicap);
+    const rows = list.length
+      ? list.map((p,i) => _sRow(i, p.name, p.handicap, 'upsets 1.5★+')).join('')
+      : _emptyMsg('Sin upsets de handicap registrados');
+    return _sectionWrap('♟️','REYES DEL HANDICAP','Victorias siendo 1.5★ o más inferior', rows);
+  }
+
+  return '';
+}
+
+function renderCruces(selectedPlayer) {
+  const el = document.getElementById('cruces-body');
+  if (!el || !selectedPlayer) { if (el) el.innerHTML = ''; return; }
+
+  const h2h = {};
+  for (const m of state.matches) {
+    let myG, oppG, opp;
+    if      (m.p1 === selectedPlayer) { myG = m.g1; oppG = m.g2; opp = m.p2; }
+    else if (m.p2 === selectedPlayer) { myG = m.g2; oppG = m.g1; opp = m.p1; }
+    else continue;
+    if (!h2h[opp]) h2h[opp] = { pj:0, w:0, l:0, d:0, gf:0, gc:0 };
+    const r = h2h[opp];
+    r.pj++; r.gf += myG; r.gc += oppG;
+    if (myG > oppG) r.w++;
+    else if (myG < oppG) r.l++;
+    else r.d++;
+  }
+
+  const entries = Object.entries(h2h).sort(([,a],[,b]) => b.pj - a.pj);
+  if (!entries.length) {
+    el.innerHTML = '<div style="color:var(--gray);font-family:\'Barlow Condensed\',sans-serif;font-size:.82rem">Sin enfrentamientos registrados</div>';
+    return;
+  }
+
+  el.innerHTML = entries.map(([opp, r]) => {
+    const wPct = (r.w / r.pj * 100).toFixed(1);
+    const dPct = (r.d / r.pj * 100).toFixed(1);
+    const lPct = (r.l / r.pj * 100).toFixed(1);
+    return `<div style="padding:.6rem 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.35rem;font-family:'Barlow Condensed',sans-serif">
+        <span style="flex:1;color:var(--white);font-size:.9rem;font-weight:600">${opp}</span>
+        <span style="color:var(--gray);font-size:.72rem">${r.pj}PJ</span>
+        <span style="color:var(--green);font-size:.78rem;font-weight:700">${r.w}V</span>
+        <span style="color:var(--yellow);font-size:.78rem">${r.d}E</span>
+        <span style="color:#ff5252;font-size:.78rem">${r.l}D</span>
+        <span style="color:var(--gray);font-size:.72rem">${r.gf}:${r.gc}</span>
+      </div>
+      <div style="height:4px;background:var(--bg2);border-radius:2px;overflow:hidden;display:flex;gap:1px">
+        <div style="width:${wPct}%;background:var(--green)"></div>
+        <div style="width:${dPct}%;background:var(--yellow)"></div>
+        <div style="width:${lPct}%;background:#ff5252"></div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ── Scroll horizontal táctil aislado en la tabla ─────────────
