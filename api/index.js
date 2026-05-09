@@ -273,11 +273,25 @@ export default {
           ORDER BY p.jugado_at ASC
         `).bind(temporadaId).all();
 
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS equipos_custom (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL UNIQUE,
+            estrellas REAL NOT NULL,
+            liga TEXT NOT NULL,
+            creado_at TEXT DEFAULT (datetime('now'))
+          )
+        `).run();
+        const ct = await env.DB.prepare(
+          'SELECT id, nombre AS n, estrellas AS s, liga AS l FROM equipos_custom ORDER BY liga, nombre'
+        ).all();
+
         return json({
           temporadaId,
           players:      (jugs.results  || []).map(j => j.nombre),
           jugadoresMap: Object.fromEntries((jugs.results || []).map(j => [j.nombre, j.id])),
           matches:      parts.results || [],
+          customTeams:  ct.results || [],
         }, 200, origin);
       }
 
@@ -320,6 +334,40 @@ export default {
         if (!await verifyPassword(password, env)) return err('Contraseña incorrecta', 401, origin);
         const id = path.split('/').pop();
         await env.DB.prepare('DELETE FROM partidos WHERE id = ?').bind(id).run();
+        return json({ ok: true }, 200, origin);
+      }
+
+      if (path === '/api/equipos' && request.method === 'GET') {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS equipos_custom (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL UNIQUE,
+            estrellas REAL NOT NULL,
+            liga TEXT NOT NULL,
+            creado_at TEXT DEFAULT (datetime('now'))
+          )
+        `).run();
+        const r = await env.DB.prepare(
+          'SELECT id, nombre AS n, estrellas AS s, liga AS l FROM equipos_custom ORDER BY liga, nombre'
+        ).all();
+        return json(r.results || [], 200, origin);
+      }
+
+      if (path === '/api/equipos' && request.method === 'POST') {
+        const { nombre, estrellas, liga, password } = await request.json();
+        if (!nombre || !estrellas || !liga) return err('Faltan campos', 400, origin);
+        if (!await verifyPassword(password, env)) return err('Contraseña incorrecta', 401, origin);
+        const result = await env.DB.prepare(
+          'INSERT INTO equipos_custom (nombre, estrellas, liga) VALUES (?, ?, ?) RETURNING id'
+        ).bind(nombre.trim(), Number(estrellas), liga.trim()).first();
+        return json({ ok: true, id: result?.id }, 200, origin);
+      }
+
+      if (path.startsWith('/api/equipos/') && request.method === 'DELETE') {
+        const { password } = await request.json();
+        if (!await verifyPassword(password, env)) return err('Contraseña incorrecta', 401, origin);
+        const id = path.split('/').pop();
+        await env.DB.prepare('DELETE FROM equipos_custom WHERE id = ?').bind(id).run();
         return json({ ok: true }, 200, origin);
       }
 
