@@ -74,6 +74,14 @@ async function verifyPassword(pwd, env) {
   return hash === env.ADMIN_PWD_HASH;
 }
 
+function calcPts(winnerStars, loserStars, gd) {
+  const starsDiff = loserStars - winnerStars;
+  let pts = 3;
+  if (starsDiff > 0) pts += Math.floor(starsDiff / 1.5) * 0.5;
+  pts += Math.floor(gd / 3) * 0.5;
+  return Math.round(pts * 10) / 10;
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
@@ -369,6 +377,32 @@ export default {
         const id = path.split('/').pop();
         await env.DB.prepare('DELETE FROM equipos_custom WHERE id = ?').bind(id).run();
         return json({ ok: true }, 200, origin);
+      }
+
+      if (path === '/api/recalc-pts' && request.method === 'POST') {
+        const { password } = await request.json();
+        if (!await verifyPassword(password, env)) return err('Contraseña incorrecta', 401, origin);
+        const { results: partidos } = await env.DB.prepare(
+          'SELECT id, goles1, goles2, estrellas1, estrellas2, puntos1, puntos2 FROM partidos'
+        ).all();
+        let updated = 0;
+        for (const p of partidos || []) {
+          const gd = Math.abs(p.goles1 - p.goles2);
+          let pts1 = p.puntos1, pts2 = p.puntos2;
+          if (p.goles1 > p.goles2) {
+            pts1 = calcPts(p.estrellas1, p.estrellas2, gd);
+            pts2 = 0;
+          } else if (p.goles2 > p.goles1) {
+            pts2 = calcPts(p.estrellas2, p.estrellas1, gd);
+            pts1 = 0;
+          }
+          if (pts1 !== p.puntos1 || pts2 !== p.puntos2) {
+            await env.DB.prepare('UPDATE partidos SET puntos1=?, puntos2=? WHERE id=?')
+              .bind(pts1, pts2, p.id).run();
+            updated++;
+          }
+        }
+        return json({ ok: true, updated, total: partidos?.length || 0 }, 200, origin);
       }
 
       if (path === '/api/youtube' && request.method === 'GET') {

@@ -843,7 +843,7 @@ function calcPts(winner, loser, gd){
     // +0.5 por cada 1.5 estrellas de diferencia (redondeado hacia abajo)
     pts += Math.floor(starsDiff / 1.5) * 0.5;
   }
-  if(gd >= 3) pts += 0.5;
+  pts += Math.floor(gd / 3) * 0.5;
   return Math.round(pts * 10) / 10;
 }
 function calcDrawPts(t1, t2){
@@ -1783,6 +1783,16 @@ function showLeagueList() { filterLeagueList(); }
 function selectLeague(liga) {
   document.getElementById('new-team-league').value = liga;
   document.getElementById('league-results').style.display = 'none';
+}
+
+async function recalcAllPts() {
+  askPassword('RECALCULAR PUNTOS', async (pwd) => {
+    try {
+      const data = await apiPost('/api/recalc-pts', { password: pwd });
+      await _cargarDatos();
+      notify(`✅ ${data.updated} de ${data.total} partidos recalculados`);
+    } catch(e) { notify('❌ ' + e.message, true); }
+  });
 }
 
 async function addCustomTeam() {
