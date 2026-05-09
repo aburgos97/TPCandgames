@@ -11,6 +11,7 @@
  *   ANTHROPIC_KEY    — API key de Anthropic (para /api/scan)
  *   YOUTUBE_CHANNEL  — ID del canal de YouTube
  *   YOUTUBE_API_KEY  — API key de YouTube
+ *   RIOT_API_KEY     — API key de Riot Games (para /api/riot)
  */
 
 const ALLOWED_ORIGINS = [
@@ -403,6 +404,113 @@ export default {
           }
         }
         return json({ ok: true, updated, total: partidos?.length || 0 }, 200, origin);
+      }
+
+      if (path === '/api/riot' && request.method === 'GET') {
+        const gameName = url.searchParams.get('gameName');
+        const tagLine  = url.searchParams.get('tagLine');
+        if (!gameName || !tagLine) return err('gameName y tagLine requeridos', 400, origin);
+        if (!env.RIOT_API_KEY) return err('RIOT_API_KEY no configurada', 500, origin);
+
+        const riotHeaders = { 'X-Riot-Token': env.RIOT_API_KEY };
+
+        const accountRes = await fetch(
+          `https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`,
+          { headers: riotHeaders }
+        );
+        if (!accountRes.ok) return err('Cuenta de Riot no encontrada', accountRes.status, origin);
+        const { puuid } = await accountRes.json();
+
+        // TFT: by-puuid no existe en LA2 — leemos desde cache D1 (cargado con /api/riot/scan-tft)
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS riot_tft_cache (
+            puuid    TEXT PRIMARY KEY,
+            tier     TEXT,
+            rnk      TEXT,
+            lp       INTEGER,
+            wins     INTEGER,
+            losses   INTEGER,
+            scanned_at TEXT DEFAULT (datetime('now'))
+          )
+        `).run();
+        const tftCached = await env.DB.prepare(
+          'SELECT tier, rnk, lp, wins, losses, scanned_at FROM riot_tft_cache WHERE puuid = ?'
+        ).bind(puuid).first();
+
+        const tftRanked = tftCached?.tier
+          ? { tier: tftCached.tier, rank: tftCached.rnk, leaguePoints: tftCached.lp,
+              wins: tftCached.wins, losses: tftCached.losses, queueType: 'RANKED_TFT' }
+          : null;
+        const tftUnavailable = !tftCached; // null row = sin clasificar; no row = sin datos
+
+        const lolRankRes = await fetch(
+          `https://la2.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`,
+          { headers: riotHeaders }
+        );
+        const lolEntries = lolRankRes.ok ? await lolRankRes.json() : [];
+
+        return json({
+          lol: { soloq: lolEntries.find(e => e.queueType === 'RANKED_SOLO_5x5') || null },
+          tft: { ranked: tftRanked, unavailable: tftUnavailable },
+        }, 200, origin);
+      }
+
+      // Busca el PUUID en un tier/division de TFT paginando hasta encontrarlo, y lo guarda en cache.
+      // Body: { gameName, tagLine, tier, division, password }
+      if (path === '/api/riot/scan-tft' && request.method === 'POST') {
+        const { gameName, tagLine, tier, division, password } = await request.json();
+        if (!await verifyPassword(password, env)) return err('Contraseña incorrecta', 401, origin);
+        if (!gameName || !tagLine || !tier || !division)
+          return err('gameName, tagLine, tier y division requeridos', 400, origin);
+        if (!env.RIOT_API_KEY) return err('RIOT_API_KEY no configurada', 500, origin);
+
+        const riotHeaders = { 'X-Riot-Token': env.RIOT_API_KEY };
+
+        const accountRes = await fetch(
+          `https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`,
+          { headers: riotHeaders }
+        );
+        if (!accountRes.ok) return err('Cuenta Riot no encontrada', accountRes.status, origin);
+        const { puuid } = await accountRes.json();
+
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS riot_tft_cache (
+            puuid    TEXT PRIMARY KEY,
+            tier     TEXT,
+            rnk      TEXT,
+            lp       INTEGER,
+            wins     INTEGER,
+            losses   INTEGER,
+            scanned_at TEXT DEFAULT (datetime('now'))
+          )
+        `).run();
+
+        let found = null;
+        for (let page = 1; page <= 30 && !found; page++) {
+          const res = await fetch(
+            `https://la2.api.riotgames.com/tft/league/v1/entries/${encodeURIComponent(tier)}/${encodeURIComponent(division)}?page=${page}`,
+            { headers: riotHeaders }
+          );
+          if (!res.ok) break;
+          const entries = await res.json();
+          if (!entries.length) break;
+          found = entries.find(e => e.puuid === puuid) || null;
+        }
+
+        if (found) {
+          await env.DB.prepare(`
+            INSERT OR REPLACE INTO riot_tft_cache (puuid, tier, rnk, lp, wins, losses, scanned_at)
+            VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+          `).bind(puuid, found.tier, found.rank, found.leaguePoints, found.wins, found.losses).run();
+          return json({ ok: true, found }, 200, origin);
+        } else {
+          // Marca como "escaneado, sin ranking" para que el cliente muestre "Sin clasificar"
+          await env.DB.prepare(`
+            INSERT OR REPLACE INTO riot_tft_cache (puuid, tier, rnk, lp, wins, losses, scanned_at)
+            VALUES (?, NULL, NULL, NULL, NULL, NULL, datetime('now'))
+          `).bind(puuid).run();
+          return json({ ok: false, msg: `No encontrado en ${tier}/${division} (páginas 1-30)` }, 200, origin);
+        }
       }
 
       if (path === '/api/youtube' && request.method === 'GET') {
