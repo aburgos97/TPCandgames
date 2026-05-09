@@ -706,6 +706,9 @@ const TEAMS=[
 {n:"Zambia",s:1.5,l:"Selecciones Nacionales"}
 ];
 
+// Equipos custom (cargados desde D1 en init) + hardcodeados
+let ALL_TEAMS = [...TEAMS];
+
 // Scoring por estrellas oficiales FIFA 18
 // Victoria base: 3pts | Empate: 1pt | Derrota: 0pts
 // Por cada 1.5★ que el ganador tenga MENOS que el perdedor: +0.5pts
@@ -731,6 +734,7 @@ async function initSupabase() {
     state.matches   = data.matches   || [];
     _temporadaId    = data.temporadaId || 1;
     _jugadoresMap   = data.jugadoresMap || {};
+    ALL_TEAMS = [...TEAMS, ...(data.customTeams || []).map(t => ({ ...t, custom: true }))];
     localStorage.setItem('fifa18_v2', JSON.stringify(state));
     renderAll();
   } catch(e) {
@@ -776,6 +780,7 @@ async function _cargarDatos() {
     state.matches   = data.matches   || [];
     _temporadaId    = data.temporadaId || 1;
     _jugadoresMap   = data.jugadoresMap || {};
+    ALL_TEAMS = [...TEAMS, ...(data.customTeams || []).map(t => ({ ...t, custom: true }))];
     localStorage.setItem('fifa18_v2', JSON.stringify(state));
     renderAll();
   } catch(e) {
@@ -1065,7 +1070,7 @@ function populateCountryLeagueFilters(){
   const countryEl=document.getElementById('country-filter');
   const leagueEl=document.getElementById('league-filter');
   if(countryEl){
-    const countries=[...new Set(TEAMS.map(t=>getCountry(t.l)))].sort();
+    const countries=[...new Set(ALL_TEAMS.map(t=>getCountry(t.l)))].sort();
     const cv=countryEl.value;
     countryEl.innerHTML='<option value="">Todos los países</option>'+countries.map(c=>`<option value="${c}">${c}</option>`).join('');
     countryEl.value=cv;
@@ -1073,7 +1078,7 @@ function populateCountryLeagueFilters(){
   // Actualizar ligas según país seleccionado
   if(leagueEl){
     const selectedCountry=countryEl?.value||'';
-    const leagues=[...new Set(TEAMS.filter(t=>!selectedCountry||getCountry(t.l)===selectedCountry).map(t=>t.l))].sort();
+    const leagues=[...new Set(ALL_TEAMS.filter(t=>!selectedCountry||getCountry(t.l)===selectedCountry).map(t=>t.l))].sort();
     const lv=leagueEl.value;
     leagueEl.innerHTML='<option value="">Todas las ligas</option>'+leagues.map(l=>`<option value="${l}">${l.includes(' - ')?l.split(' - ').slice(1).join(' - '):l}</option>`).join('');
     // restaurar valor si sigue disponible
@@ -1084,14 +1089,14 @@ function populateCountryLeagueFilters(){
     const ce=document.getElementById(`p${p}-country-filter`);
     const le=document.getElementById(`p${p}-league-filter`);
     if(ce){
-      const countries=[...new Set(TEAMS.map(t=>getCountry(t.l)))].sort();
+      const countries=[...new Set(ALL_TEAMS.map(t=>getCountry(t.l)))].sort();
       const cv=ce.value;
       ce.innerHTML='<option value="">🌍 Todos los países</option>'+countries.map(c=>`<option value="${c}">${c}</option>`).join('');
       ce.value=cv;
     }
     if(le&&ce){
       const sc=ce.value;
-      const leagues=[...new Set(TEAMS.filter(t=>!sc||getCountry(t.l)===sc).map(t=>t.l))].sort();
+      const leagues=[...new Set(ALL_TEAMS.filter(t=>!sc||getCountry(t.l)===sc).map(t=>t.l))].sort();
       const lv=le.value;
       le.innerHTML='<option value="">Todas las ligas</option>'+leagues.map(l=>`<option value="${l}">${l.includes(' - ')?l.split(' - ').slice(1).join(' - '):l}</option>`).join('');
       if(leagues.includes(lv))le.value=lv;else le.value='';
@@ -1111,7 +1116,7 @@ function onTeamCountryChange(p){
   const le=document.getElementById(`p${p}-league-filter`);
   if(!ce||!le)return;
   const sc=ce.value;
-  const leagues=[...new Set(TEAMS.filter(t=>!sc||getCountry(t.l)===sc).map(t=>t.l))].sort();
+  const leagues=[...new Set(ALL_TEAMS.filter(t=>!sc||getCountry(t.l)===sc).map(t=>t.l))].sort();
   le.innerHTML='<option value="">Todas las ligas</option>'+leagues.map(l=>`<option value="${l}">${l.includes(' - ')?l.split(' - ').slice(1).join(' - '):l}</option>`).join('');
   filterTeams(p);
 }
@@ -1122,21 +1127,25 @@ function renderTeamsPage(){
   const tf=document.getElementById('tier-filter')?.value||'';
   const cf=document.getElementById('country-filter')?.value||'';
   const lf=document.getElementById('league-filter')?.value||'';
-  const filtered=TEAMS.filter(t=>{
+  const filtered=ALL_TEAMS.filter(t=>{
     if(tf&&String(t.s)!==tf)return false;
     if(cf&&getCountry(t.l)!==cf)return false;
     if(lf&&t.l!==lf)return false;
     if(q&&!t.n.toLowerCase().includes(q)&&!t.l.toLowerCase().includes(q))return false;
     return true;
   });
-  document.getElementById('teams-count').textContent=`Mostrando ${filtered.length} de ${TEAMS.length} equipos`;
+  const customCount = ALL_TEAMS.filter(t => t.custom).length;
+  document.getElementById('teams-count').textContent=`Mostrando ${filtered.length} de ${ALL_TEAMS.length} equipos (${customCount} personalizados)`;
   if(!filtered.length){el.innerHTML='<div class="empty-state"><span class="big">🔍</span>Sin resultados</div>';return;}
   const byLeague={};
   filtered.forEach(t=>{if(!byLeague[t.l])byLeague[t.l]=[];byLeague[t.l].push(t)});
   el.innerHTML=Object.entries(byLeague).sort(([a],[b])=>a.localeCompare(b)).map(([league,teams])=>`
     <div class="league-section">
       <div class="league-header"><span class="league-name">${league}</span><span style="color:var(--muted);font-size:.75rem">${teams.length} equipos</span></div>
-      <div class="teams-chips">${teams.map(t=>`<div class="team-chip-display" style="cursor:pointer" onclick="editTeamStars('${t.n.replace(/'/g,"\\'")}',${t.s})">${tb(t)}<span>${t.n}</span><span style="margin-left:.3rem;color:var(--gray);font-size:.65rem">✏️</span></div>`).join('')}</div>
+      <div class="teams-chips">${teams.map(t => t.custom
+        ? `<div class="team-chip-display">${tb(t)}<span>${t.n}</span><span style="margin-left:.25rem;font-size:.6rem;color:var(--yellow)" title="Equipo personalizado">✨</span><span style="margin-left:.4rem;color:#ff5252;font-size:.75rem;cursor:pointer;font-weight:700" onclick="deleteCustomTeam(${t.id},'${t.n.replace(/'/g,"\\'")}')">✕</span></div>`
+        : `<div class="team-chip-display" style="cursor:pointer" onclick="editTeamStars('${t.n.replace(/'/g,"\\'")}',${t.s})">${tb(t)}<span>${t.n}</span><span style="margin-left:.3rem;color:var(--gray);font-size:.65rem">✏️</span></div>`
+      ).join('')}</div>
     </div>`).join('');
 }
 
@@ -1145,7 +1154,7 @@ let p1Team=null,p2Team=null;
 function filterTeams(p){showTeamList(p,document.getElementById(`p${p}-team-search`).value.toLowerCase())}
 function showTeamList(p,q=''){
   const re=document.getElementById(`p${p}-team-results`);
-  const f=TEAMS.filter(t=>!q||t.n.toLowerCase().includes(q)||t.l.toLowerCase().includes(q));
+  const f=ALL_TEAMS.filter(t=>!q||t.n.toLowerCase().includes(q)||t.l.toLowerCase().includes(q));
   if(!f.length){re.style.display='none';return;}
   re.style.display='block';
   re.innerHTML=f.slice(0,50).map(t=>`<div class="team-option" onclick="selectTeam(${p},'${t.n.replace(/'/g,"\\'")}')"><span>${t.n} <span style="color:var(--muted);font-size:.72rem">${t.l}</span></span>${tb(t)}</div>`).join('');
@@ -1155,7 +1164,7 @@ function showTeamList(p,q=''){
   setTimeout(()=>document.addEventListener('click',close),10);
 }
 function selectTeam(p,name){
-  const team=TEAMS.find(t=>t.n===name);if(!team)return;
+  const team=ALL_TEAMS.find(t=>t.n===name);if(!team)return;
   if(p===1)p1Team=team;else p2Team=team;
   document.getElementById(`p${p}-team-search`).value='';
   document.getElementById(`p${p}-team-results`).style.display='none';
@@ -1386,7 +1395,7 @@ async function analyzeMatchImage(dataUrl) {
     const mediaType = dataUrl.split(';')[0].split(':')[1];
 
     // Pasar lista de equipos para cotejo exacto
-    const teamList = TEAMS.map(t => t.n).join('\n');
+    const teamList = ALL_TEAMS.map(t => t.n).join('\n');
 
     const response = await fetch(WORKER_URL + '/api/scan', {
       method: 'POST',
@@ -1411,11 +1420,11 @@ async function analyzeMatchImage(dataUrl) {
     const result = JSON.parse(jsonMatch[0]);
 
     // Buscar los equipos en la DB
-    const team1Obj = TEAMS.find(t => t.n === result.team1_match)
-                  || TEAMS.find(t => t.n.toLowerCase().includes(result.team1_match?.toLowerCase()))
+    const team1Obj = ALL_TEAMS.find(t => t.n === result.team1_match)
+                  || ALL_TEAMS.find(t => t.n.toLowerCase().includes(result.team1_match?.toLowerCase()))
                   || { n: result.team1_match, s: 2.5, l: 'Desconocido' };
-    const team2Obj = TEAMS.find(t => t.n === result.team2_match)
-                  || TEAMS.find(t => t.n.toLowerCase().includes(result.team2_match?.toLowerCase()))
+    const team2Obj = ALL_TEAMS.find(t => t.n === result.team2_match)
+                  || ALL_TEAMS.find(t => t.n.toLowerCase().includes(result.team2_match?.toLowerCase()))
                   || { n: result.team2_match, s: 2.5, l: 'Desconocido' };
 
     _scanData = {
@@ -1428,11 +1437,11 @@ async function analyzeMatchImage(dataUrl) {
     // Mostrar resultado detectado
     document.getElementById('scan-team1-name').textContent = result.team1_raw || result.team1_match;
     document.getElementById('scan-team1-matched').textContent =
-      TEAMS.find(t => t.n === team1Obj.n) ? `✅ ${team1Obj.n} (${team1Obj.s}★)` : `⚠️ ${team1Obj.n} — verificar`;
+      ALL_TEAMS.find(t => t.n === team1Obj.n) ? `✅ ${team1Obj.n} (${team1Obj.s}★)` : `⚠️ ${team1Obj.n} — verificar`;
     document.getElementById('scan-score').textContent = `${result.goals1}  —  ${result.goals2}`;
     document.getElementById('scan-team2-name').textContent = result.team2_raw || result.team2_match;
     document.getElementById('scan-team2-matched').textContent =
-      TEAMS.find(t => t.n === team2Obj.n) ? `✅ ${team2Obj.n} (${team2Obj.s}★)` : `⚠️ ${team2Obj.n} — verificar`;
+      ALL_TEAMS.find(t => t.n === team2Obj.n) ? `✅ ${team2Obj.n} (${team2Obj.s}★)` : `⚠️ ${team2Obj.n} — verificar`;
 
     document.getElementById('scan-loading').style.display = 'none';
     document.getElementById('scan-result').style.display = 'block';
@@ -1538,7 +1547,7 @@ function confirmEditStars(teamName) {
   if (_selectedStars === null) { notify('Seleccioná las estrellas', true); return; }
   
   // Actualizar en el array TEAMS en memoria
-  const team = TEAMS.find(t => t.n === teamName);
+  const team = ALL_TEAMS.find(t => t.n === teamName);
   if (!team) { notify('Equipo no encontrado', true); return; }
   
   const oldStars = team.s;
@@ -1744,6 +1753,64 @@ document.addEventListener('click', function(e) {
   if (page === 'jugadores') renderPlayersList();
   if (page === 'equipos') renderTeamsPage();
 });
+
+// ── Equipos custom ───────────────────────────────────────────
+function _getLeagues() {
+  return [...new Set(ALL_TEAMS.map(t => t.l))].sort();
+}
+
+function filterLeagueList() {
+  const q  = (document.getElementById('new-team-league').value || '').toLowerCase();
+  const re = document.getElementById('league-results');
+  if (!re) return;
+  const matches = _getLeagues().filter(l => !q || l.toLowerCase().includes(q));
+  if (!matches.length) { re.style.display = 'none'; return; }
+  re.style.display = 'block';
+  re.innerHTML = matches.slice(0, 40).map(l =>
+    `<div class="team-option" onclick="selectLeague('${l.replace(/'/g, "\\'")}')">${l}</div>`
+  ).join('');
+  const close = e => {
+    if (!e.target.closest('#league-results') && !e.target.closest('#new-team-league')) {
+      re.style.display = 'none';
+      document.removeEventListener('click', close);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', close), 10);
+}
+
+function showLeagueList() { filterLeagueList(); }
+
+function selectLeague(liga) {
+  document.getElementById('new-team-league').value = liga;
+  document.getElementById('league-results').style.display = 'none';
+}
+
+async function addCustomTeam() {
+  const nombre    = document.getElementById('new-team-name').value.trim();
+  const estrellas = parseFloat(document.getElementById('new-team-stars').value);
+  const liga      = document.getElementById('new-team-league').value.trim();
+  if (!nombre || !estrellas || !liga) { notify('Completá todos los campos', true); return; }
+  askPassword('AGREGAR EQUIPO', async (pwd) => {
+    try {
+      await apiPost('/api/equipos', { nombre, estrellas, liga, password: pwd });
+      await _cargarDatos();
+      document.getElementById('new-team-name').value  = '';
+      document.getElementById('new-team-stars').value = '';
+      document.getElementById('new-team-league').value = '';
+      notify(`✅ ${nombre} agregado`);
+    } catch(e) { notify('❌ ' + e.message, true); }
+  });
+}
+
+async function deleteCustomTeam(id, nombre) {
+  askPassword('ELIMINAR EQUIPO', async (pwd) => {
+    try {
+      await apiDelete(`/api/equipos/${id}`, { password: pwd });
+      await _cargarDatos();
+      notify(`✅ ${nombre} eliminado`);
+    } catch(e) { notify('❌ ' + e.message, true); }
+  });
+}
 
 // ── Scroll horizontal táctil aislado en la tabla ─────────────
 document.addEventListener('DOMContentLoaded', function() {
