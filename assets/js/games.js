@@ -14,6 +14,12 @@ let state    = { jugadores:[], juegos:[], badges:[], rankings:[], jugador_badges
 let _matchesCache  = null;
 let _currentProfileId = null;
 
+// Cuentas de Riot vinculadas por jugador ID (plataforma LAS = la2, routing = americas)
+const RIOT_ACCOUNTS = {
+  1: { gameName: 'WK Nais',      tagLine: 'LAS' },  // Axel
+  8: { gameName: 'Zantisimo420', tagLine: 'LAS' },  // Chulo Z
+};
+
 // Tendencias de posición — se pueblan cuando haya histórico de rankings
 // Por ahora vacíos: no muestra flechas ↑↓ hasta tener comparación de sesiones
 const trends   = {};   // { [rankPos]: '▲' | '▼' }
@@ -272,7 +278,10 @@ function openPerfil(id) {
       <div class="pf-stat"><span class="pf-stat-val">${p.gf - p.gc > 0 ? '+' : ''}${p.gf - p.gc}</span><span class="pf-stat-lbl">Diferencia</span></div>
       <div class="pf-stat"><span class="pf-stat-val">${p.racha > 0 ? '🔥' + p.racha : p.racha}</span><span class="pf-stat-lbl">Racha actual</span></div>
     </div>
+    ${RIOT_ACCOUNTS[id] ? '<div id="pf-riot"></div>' : ''}
   `;
+
+  if (RIOT_ACCOUNTS[id]) fetchAndRenderRiot(id);
 
   // ── Logros FIFA 18 ──────────────────────────────────
   // Racha invicta calculada desde el historial real de partidos
@@ -550,6 +559,61 @@ async function renderHistorial() {
     `;
   } catch(e) {
     el.innerHTML = '<div class="hist-empty" style="color:rgba(186,120,101,.5)">No se pudo cargar el historial</div>';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// RIOT GAMES
+// ══════════════════════════════════════════════════════
+
+const RIOT_TIER_COLOR = {
+  IRON: '#888888', BRONZE: '#cd7f32', SILVER: '#c0c0c0',
+  GOLD: '#ffd700', PLATINUM: '#0ac8b9', EMERALD: '#50c878',
+  DIAMOND: '#a0c8f0', MASTER: '#9d48e0', GRANDMASTER: '#e84057',
+  CHALLENGER: '#f4c874',
+};
+
+function _riotRankCard(title, entry) {
+  if (!entry) return `
+    <div class="riot-card">
+      <div class="riot-game-title">${title}</div>
+      <div class="riot-unranked">Sin clasificar</div>
+    </div>`;
+  const color    = RIOT_TIER_COLOR[entry.tier] || '#888';
+  const noNum    = ['MASTER','GRANDMASTER','CHALLENGER'].includes(entry.tier);
+  const rankStr  = `${entry.tier}${noNum ? '' : ' ' + entry.rank}`;
+  const total    = entry.wins + entry.losses;
+  const wr       = total > 0 ? Math.round(entry.wins / total * 100) : 0;
+  return `
+    <div class="riot-card">
+      <div class="riot-game-title">${title}</div>
+      <div class="riot-tier" style="color:${color}">${rankStr}</div>
+      <div class="riot-lp">${entry.leaguePoints} LP</div>
+      <div class="riot-wr">${entry.wins}V · ${entry.losses}D · ${wr}%</div>
+    </div>`;
+}
+
+async function fetchAndRenderRiot(playerId) {
+  const account = RIOT_ACCOUNTS[playerId];
+  const el = document.getElementById('pf-riot');
+  if (!account || !el) return;
+
+  el.innerHTML = '<div class="riot-loading">⏳ Cargando Riot...</div>';
+  try {
+    const res = await fetch(
+      `${WORKER_URL}/api/riot?gameName=${encodeURIComponent(account.gameName)}&tagLine=${encodeURIComponent(account.tagLine)}`
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const { lol, tft } = await res.json();
+
+    el.innerHTML = `
+      <div class="pf-stats-title">Riot Games · ${account.gameName}#${account.tagLine}</div>
+      <div class="riot-grid">
+        ${_riotRankCard('League of Legends · Solo/Q', lol?.soloq)}
+        ${_riotRankCard('TFT · Ranked', tft?.ranked)}
+      </div>`;
+  } catch(e) {
+    el.innerHTML = '<div class="riot-error">No se pudo cargar Riot</div>';
   }
 }
 
