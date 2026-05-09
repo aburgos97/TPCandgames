@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>The Pot Games</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/games.css">
+</head>
+<body>
+
+<!-- TEST BANNER -->
+<div class="test-strip">🧪 THE POT GAMES · ENTORNO TEST · No es producción</div>
+
+<!-- ════════════════════════════════════════
+     LEADERBOARD
+     ════════════════════════════════════════ -->
+<div class="screen" id="screen-leaderboard">
+
+  <!-- Nav bar -->
+  <nav class="lb-nav">
+    <a href="/" class="lb-back">‹</a>
+    <a href="/" class="lb-nav-brand">🌿 TPC</a>
+    <span class="lb-nav-sep">/</span>
+    <span class="lb-nav-page">Leaderboard</span>
+    <div class="lb-switch">
+      <div class="lb-switch-btn active" onclick="switchMode('local',this)">Local</div>
+      <div class="lb-switch-btn" onclick="switchMode('global',this)">Global</div>
+    </div>
+  </nav>
+
+  <!-- Podio top 3 + info bar -->
+  <div class="lb-podium-section">
+    <div class="lb-podium" id="lb-podium"></div>
+    <div class="lb-info-bar" id="lb-info-bar">🌿 &nbsp;Cargando...</div>
+  </div>
+
+  <!-- Lista posiciones 4+ -->
+  <div class="lb-list-bg" id="lb-list-bg">
+    <div class="lb-list-header">
+      <span class="lh-no">Pos.</span>
+      <span class="lh-name">Jugador</span>
+      <span class="lh-pts">CP</span>
+    </div>
+    <div id="lb-list"></div>
+    <div class="lb-fade"></div>
+
+    <!-- ── Torneos vigentes ── -->
+    <section class="torneos-section">
+      <div class="torneos-title">🏆 Torneos Vigentes</div>
+      <div class="torneo-card" onclick="window.location.href='fifa18/'">
+        <div class="torneo-icon">⚽</div>
+        <div class="torneo-info">
+          <div class="torneo-name">FIFA 18</div>
+          <div class="torneo-estado">En curso · The Pot Club</div>
+        </div>
+        <div class="torneo-arrow">›</div>
+      </div>
+    </section>
+
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════
+     PROFILE
+     ════════════════════════════════════════ -->
+<div class="screen" id="screen-profile">
+
+  <!-- Top bar -->
+  <div class="pf-topbar">
+    <div class="lb-back" onclick="goBack()" style="cursor:pointer">‹</div>
+    <div class="pf-title">Perfil</div>
+  </div>
+
+  <!-- Avatar section (render JS) -->
+  <div class="pf-avatar-wrap" id="pf-avatar-wrap"></div>
+
+  <!-- Tabs -->
+  <div class="pf-tabs">
+    <div class="pf-tab active" onclick="pfTab(this,'pf-info')">Info</div>
+    <div class="pf-tab" onclick="pfTab(this,'pf-badges')">Logros</div>
+    <div class="pf-tab" onclick="pfTab(this,'pf-history')">Historial</div>
+  </div>
+
+  <div class="pf-tab-pane active" id="pf-info"></div>
+  <div class="pf-tab-pane" id="pf-badges"></div>
+  <div class="pf-tab-pane" id="pf-history"></div>
+
+</div>
+
+<script src="../assets/js/games.js"></script>
+</body>
+</html>

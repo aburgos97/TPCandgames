@@ -1,589 +1,4 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>The Pot Games</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-html, body {
-  max-width: 100%; overflow-x: hidden;
-  background: #0f0604;
-  font-family: 'Montserrat', sans-serif;
-  color: #f8f8f8;
-  min-height: 100vh;
-}
 
-.screen {
-  max-width: 430px;
-  margin: 0 auto;
-  min-height: 100vh;
-  position: relative;
-  overflow: hidden;
-}
-
-/* ══ TEST STRIP ══════════════════════════ */
-.test-strip {
-  max-width: 430px; margin: 0 auto;
-  background: repeating-linear-gradient(
-    45deg, rgba(186,120,101,.25) 0, rgba(186,120,101,.25) 8px,
-    rgba(56,24,9,.9) 8px, rgba(56,24,9,.9) 16px
-  );
-  text-align: center; padding: 7px;
-  font-size: 10px; font-weight: 700; letter-spacing: 2.5px;
-  text-transform: uppercase; color: #d4967f;
-  border-bottom: 1px solid rgba(186,120,101,.3);
-}
-
-/* ══ LEADERBOARD SCREEN ══════════════════ */
-#screen-leaderboard {
-  background: linear-gradient(180deg,
-    #3d1508 0%,
-    #2a0d06 25%,
-    #1a0805 55%,
-    #160604 100%
-  );
-}
-
-/* Hero background con efecto visual */
-.lb-hero-bg {
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 440px;
-  overflow: hidden; pointer-events: none;
-}
-.lb-hero-bg::before {
-  content: '';
-  position: absolute; inset: 0;
-  background:
-    radial-gradient(ellipse at 70% 15%, rgba(186,120,101,.4) 0%, transparent 55%),
-    radial-gradient(ellipse at 15% 60%, rgba(110,49,44,.5) 0%, transparent 45%),
-    radial-gradient(ellipse at 50% 80%, rgba(26,8,5,.8) 0%, transparent 50%);
-}
-/* Textura diagonal */
-.lb-hero-bg::after {
-  content: '';
-  position: absolute; inset: 0;
-  background-image: repeating-linear-gradient(
-    -45deg,
-    rgba(186,120,101,.03) 0, rgba(186,120,101,.03) 1px,
-    transparent 1px, transparent 14px
-  );
-}
-/* Elemento decorativo derecho */
-.lb-hero-deco {
-  position: absolute;
-  right: -10px; top: 20px;
-  font-size: 11rem; opacity: .07;
-  filter: blur(2px);
-  user-select: none;
-  transform: rotate(15deg);
-}
-
-/* TOP BAR */
-.lb-topbar {
-  position: relative; z-index: 10;
-  display: flex; align-items: center;
-  padding: 48px 18px 0;
-}
-.lb-back {
-  width: 30px; height: 30px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: #f8f8f8; font-size: 1.4rem;
-  opacity: .8;
-}
-.lb-title-wrap { margin-left: 10px; }
-.lb-title {
-  font-family: 'Poppins', sans-serif;
-  font-size: 22px; font-weight: 500;
-  color: #f8f8f8;
-  text-shadow: 0 4px 8px rgba(0,0,0,.4);
-  line-height: 1.1;
-}
-.lb-subtitle {
-  font-family: 'Poppins', sans-serif;
-  font-size: 11px; font-weight: 300;
-  color: rgba(248,248,248,.55);
-  display: block; margin-top: 1px;
-}
-/* Switch Local / Global */
-.lb-switch {
-  margin-left: auto;
-  background: rgba(0,0,0,.5);
-  border-radius: 100px;
-  padding: 3px;
-  display: flex;
-  box-shadow: 0 4px 8px rgba(0,0,0,.4);
-  border: 1px solid rgba(186,120,101,.2);
-}
-.lb-switch-btn {
-  padding: 4px 13px;
-  border-radius: 100px;
-  font-size: 10px; font-weight: 600; letter-spacing: .5px;
-  cursor: pointer; transition: all .2s;
-  color: rgba(248,248,248,.5);
-}
-.lb-switch-btn.active {
-  background: #6E312C;
-  color: #f8f8f8;
-  box-shadow: 0 2px 6px rgba(0,0,0,.4);
-}
-
-/* ══ PODIO ═══════════════════════════════ */
-.lb-podium {
-  position: relative; z-index: 5;
-  display: flex; align-items: flex-end; justify-content: center;
-  padding: 16px 8px 0;
-}
-
-.pod-slot {
-  display: flex; flex-direction: column; align-items: center;
-  position: relative; cursor: pointer;
-  transition: transform .2s;
-  padding: 0 6px;
-}
-.pod-slot:active { transform: scale(.97); }
-.pod-slot-1 { order: 2; }
-.pod-slot-2 { order: 1; margin-bottom: 20px; }
-.pod-slot-3 { order: 3; margin-bottom: 20px; }
-
-/* Hexágono */
-.pod-hex {
-  clip-path: polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%);
-  display: flex; align-items: center; justify-content: center;
-  position: relative;
-}
-.pod-hex-border-1 {
-  width: 130px; height: 150px;
-  background: linear-gradient(145deg, #BA7865 0%, #e8c4a8 30%, #BA7865 55%, #8a4a30 80%, #6E312C 100%);
-}
-.pod-hex-border-23 {
-  width: 105px; height: 121px;
-  background: linear-gradient(145deg, #6E312C 0%, #BA7865 40%, #8a5244 70%, #4a1e14 100%);
-}
-.pod-hex-inner {
-  clip-path: polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%);
-  background: #1e0c08;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 2.5rem;
-  position: absolute;
-}
-.pod-hex-border-1 .pod-hex-inner  { width: 120px; height: 138px; }
-.pod-hex-border-23 .pod-hex-inner { width: 95px; height: 109px; font-size: 2rem; }
-
-/* Pill nombre */
-.pod-pill {
-  margin-top: 12px;
-  padding: 4px 14px;
-  border-radius: 100px;
-  font-size: 11px; font-weight: 700;
-  white-space: nowrap;
-  max-width: 110px; overflow: hidden; text-overflow: ellipsis;
-}
-.pod-slot-1 .pod-pill { background: #BA7865; color: #fff; font-size: 12px; }
-.pod-slot-2 .pod-pill, .pod-slot-3 .pod-pill {
-  background: rgba(110,49,44,.5); color: rgba(248,248,248,.8);
-  border: 1px solid rgba(186,120,101,.3);
-}
-
-/* Posición */
-.pod-rank {
-  font-size: 28px; font-weight: 800; line-height: 1.1;
-  text-shadow: 0 4px 8px rgba(0,0,0,.5);
-  margin-top: 6px;
-}
-.pod-slot-1 .pod-rank { color: #BA7865; font-size: 32px; }
-.pod-slot-2 .pod-rank { color: #b8a8a0; }
-.pod-slot-3 .pod-rank { color: #8a6040; }
-
-/* Puntos */
-.pod-pts {
-  font-size: 16px; font-weight: 800;
-  color: #f8f8f8; margin-top: 2px;
-  text-shadow: 0 4px 6px rgba(0,0,0,.4);
-}
-.pod-pts-lbl {
-  font-size: 8px; font-weight: 600; letter-spacing: 1.5px;
-  text-transform: uppercase; color: rgba(186,120,101,.6);
-  margin-top: 1px;
-}
-
-/* ══ LISTA RANKING ═══════════════════════ */
-.lb-list-bg {
-  position: relative; z-index: 5;
-  margin-top: 20px;
-  background: linear-gradient(180deg,
-    rgba(18,5,2,.7) 0%,
-    #160604 8%
-  );
-  border-radius: 22px 22px 0 0;
-  padding-bottom: 50px;
-  /* Sombra superior */
-  box-shadow: 0 -8px 24px rgba(0,0,0,.4);
-}
-.lb-list-header {
-  display: flex; align-items: center;
-  padding: 18px 20px 10px;
-  border-bottom: 1px solid rgba(186,120,101,.12);
-}
-.lb-list-header span {
-  font-size: 13px; font-weight: 900; color: #f8f8f8;
-}
-.lh-no   { width: 36px; }
-.lh-name { flex: 1; }
-.lh-pts  { width: 56px; text-align: right; margin-right: 22px; }
-
-/* Filas */
-.lb-row {
-  display: flex; align-items: center;
-  padding: 9px 18px;
-  border-bottom: 1px solid rgba(255,255,255,.04);
-  cursor: pointer; position: relative;
-  transition: background .12s;
-}
-.lb-row:hover { background: rgba(186,120,101,.07); }
-.lb-row:last-child { border-bottom: none; }
-
-.lb-trend {
-  position: absolute; left: 4px; top: 50%;
-  transform: translateY(-50%);
-  font-size: 7px; font-weight: 900;
-}
-.lb-trend.up   { color: #66bb6a; }
-.lb-trend.down { color: #ef5350; }
-
-.lb-no   { width: 36px; font-size: 14px; font-weight: 500; color: #f8f8f8; text-align:center; }
-.lb-ava  { width: 30px; height: 30px; border-radius: 50%; background: #2a1008; border: 1px solid rgba(186,120,101,.25); display:flex; align-items:center; justify-content:center; font-size:1rem; margin-right:10px; flex-shrink:0; }
-.lb-name { flex:1; font-size:14px; font-weight:500; color:#f8f8f8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.lb-pts  { font-size:14px; font-weight:500; color:#f8f8f8; text-align:right; margin-right:8px; min-width:38px; }
-.lb-arr  { color:rgba(248,248,248,.35); font-size:.85rem; flex-shrink:0; }
-
-/* Fade inferior */
-.lb-fade {
-  position: sticky; bottom: 0;
-  height: 70px; margin-top: -70px;
-  background: linear-gradient(0deg, #160604 0%, transparent 100%);
-  pointer-events: none;
-}
-
-/* ══ PROFILE SCREEN ══════════════════════ */
-#screen-profile {
-  display: none;
-  background: linear-gradient(180deg, #3d1508 0%, #1a0805 35%, #160604 100%);
-}
-
-.pf-topbar {
-  display: flex; align-items: center;
-  padding: 48px 18px 0;
-  position: relative; z-index: 10;
-}
-.pf-title {
-  font-family: 'Poppins', sans-serif;
-  font-size: 22px; font-weight: 500;
-  color: #f8f8f8; margin-left: 10px;
-  text-shadow: 0 4px 8px rgba(0,0,0,.4);
-}
-
-/* Avatar hero */
-.pf-avatar-wrap {
-  display: flex; flex-direction: column;
-  align-items: center; padding: 24px 20px 0;
-}
-.pf-avatar-ring {
-  width: 116px; height: 116px; border-radius: 50%;
-  background: linear-gradient(145deg, #BA7865, #e8c4a8, #BA7865, #6E312C);
-  padding: 3px; position: relative;
-  box-shadow: 0 0 28px rgba(186,120,101,.4), 0 8px 24px rgba(0,0,0,.5);
-}
-.pf-avatar-inner {
-  width: 100%; height: 100%; border-radius: 50%;
-  background: #200a05;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 3.2rem; overflow: hidden; position: relative;
-}
-.pf-avatar-inner::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: linear-gradient(105deg, transparent 35%, rgba(232,184,158,.18) 50%, transparent 65%);
-  animation: shine 4s ease-in-out infinite;
-}
-@keyframes shine { 0%{transform:translateX(-120%)} 60%{transform:translateX(120%)} 100%{transform:translateX(120%)} }
-.pf-edit {
-  position: absolute; bottom: 2px; right: 2px;
-  width: 26px; height: 26px; border-radius: 50%;
-  background: #BA7865; border: 2px solid #160604;
-  display: flex; align-items: center; justify-content: center;
-  font-size: .72rem; cursor: pointer;
-}
-
-.pf-name {
-  font-family: 'Poppins', sans-serif;
-  font-size: 21px; font-weight: 600; color: #f8f8f8;
-  margin-top: 12px; text-align: center;
-}
-.pf-club-meta {
-  display: flex; align-items: center; gap: 5px;
-  margin-top: 3px; font-size: 11px; font-weight: 400;
-  color: rgba(248,248,248,.5);
-}
-.pf-cogo-bar {
-  margin-top: 10px;
-  background: rgba(186,120,101,.1);
-  border: 1px solid rgba(186,120,101,.28);
-  border-radius: 100px; padding: 5px 18px;
-  display: flex; align-items: center; gap: 8px;
-}
-.pf-cogo-val {
-  font-size: 19px; font-weight: 800;
-  background: linear-gradient(135deg, #BA7865, #e8c4a8, #6E312C);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.pf-cogo-lbl {
-  font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
-  text-transform: uppercase; color: rgba(186,120,101,.65);
-}
-
-/* Tabs */
-.pf-tabs {
-  display: flex; margin: 22px 0 0;
-  border-bottom: 1px solid rgba(186,120,101,.18);
-  padding: 0 20px;
-}
-.pf-tab {
-  flex: 1; text-align: center; padding: 10px 0;
-  font-size: 13px; font-weight: 600;
-  color: rgba(248,248,248,.4); cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: color .15s, border-color .15s;
-}
-.pf-tab.active { color: #BA7865; border-bottom-color: #BA7865; }
-
-.pf-tab-pane { display: none; padding: 20px 20px 60px; }
-.pf-tab-pane.active { display: block; }
-
-/* Rank cards */
-.pf-rank-section-lbl {
-  font-size: 11px; font-weight: 600; letter-spacing: 1px;
-  text-transform: uppercase; color: rgba(248,248,248,.4);
-  margin-bottom: 10px; display: block;
-}
-.pf-rank-row { display: flex; gap: 10px; margin-bottom: 18px; }
-.pf-rank-card {
-  flex: 1; background: rgba(186,120,101,.08);
-  border: 1px solid rgba(186,120,101,.2);
-  border-radius: 14px; padding: 14px 12px; text-align: center;
-}
-.pf-rank-icon { font-size: 2.4rem; display: block; margin-bottom: 5px; }
-.pf-rank-val {
-  font-size: 26px; font-weight: 800;
-  background: linear-gradient(135deg, #BA7865, #e8c4a8);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text; display: block;
-}
-.pf-rank-lbl {
-  font-size: 10px; font-weight: 600; letter-spacing: .5px;
-  color: rgba(248,248,248,.4); text-transform: uppercase; margin-top: 2px;
-}
-
-/* Stats */
-.pf-stats-title {
-  font-size: 14px; font-weight: 700; color: #f8f8f8;
-  margin: 4px 0 12px; text-align: center;
-}
-.pf-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.pf-stat {
-  background: rgba(186,120,101,.07); border: 1px solid rgba(186,120,101,.15);
-  border-radius: 12px; padding: 12px; text-align: center;
-}
-.pf-stat-val {
-  font-size: 21px; font-weight: 800;
-  background: linear-gradient(135deg, #BA7865, #e8c4a8);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text; display: block;
-}
-.pf-stat-lbl {
-  font-size: 9px; font-weight: 700; letter-spacing: 1px;
-  text-transform: uppercase; color: rgba(248,248,248,.35); margin-top: 2px;
-}
-
-/* Badges */
-.pf-badges-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
-.pf-badge {
-  background: rgba(186,120,101,.08); border: 1px solid rgba(186,120,101,.15);
-  border-radius: 12px; padding: 12px 6px; text-align: center;
-  transition: border-color .15s;
-}
-.pf-badge.legendario { border-color: rgba(186,120,101,.5); background: rgba(186,120,101,.15); }
-.pf-badge.epico      { border-color: rgba(186,120,101,.35); }
-.pf-badge-icon { font-size: 1.7rem; display: block; margin-bottom: 4px; }
-.pf-badge-name { font-size: 9px; font-weight: 700; color: rgba(248,248,248,.8); letter-spacing: .3px; }
-.pf-badge-rar  { font-size: 8px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; display: block; }
-.pf-badge-rar.legendario { color: #BA7865; }
-.pf-badge-rar.epico      { color: #d4967f; }
-.pf-badge-rar.raro       { color: rgba(248,248,248,.45); }
-.pf-badge-rar.comun      { color: rgba(248,248,248,.25); }
-.pf-badge-desc {
-  font-size: 8px; font-weight: 500;
-  color: rgba(248,248,248,.38);
-  text-align: center; line-height: 1.3;
-  margin-top: 2px; display: block;
-}
-.pf-badge.bloqueado {
-  border-color: rgba(248,248,248,.06);
-  background: rgba(248,248,248,.03);
-}
-
-/* ══ MODAL SELECTOR DE AVATAR ════════════ */
-.avatar-modal-overlay {
-  position: fixed; inset: 0; z-index: 1000;
-  background: rgba(0,0,0,.85);
-  display: flex; align-items: flex-end; justify-content: center;
-  padding: 0;
-}
-.avatar-modal {
-  background: #1e0c08;
-  border: 1px solid rgba(186,120,101,.3);
-  border-radius: 20px 20px 0 0;
-  width: 100%; max-width: 430px;
-  max-height: 80vh;
-  display: flex; flex-direction: column;
-  overflow: hidden;
-  animation: slideUp .3s ease;
-}
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-.avatar-modal-header {
-  padding: 16px 20px 12px;
-  display: flex; align-items: center; justify-content: space-between;
-  border-bottom: 1px solid rgba(186,120,101,.15);
-  flex-shrink: 0;
-}
-.avatar-modal-title {
-  font-family: 'Poppins', sans-serif;
-  font-size: 16px; font-weight: 600; color: #f8f8f8;
-}
-.avatar-modal-close {
-  width: 28px; height: 28px; border-radius: 50%;
-  background: rgba(186,120,101,.15); border: none;
-  color: #f8f8f8; font-size: 1rem; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-}
-.avatar-grid {
-  display: grid; grid-template-columns: repeat(4,1fr);
-  gap: 10px; padding: 16px;
-  overflow-y: auto; flex: 1;
-}
-.avatar-grid-item {
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  cursor: pointer; padding: 8px 4px;
-  border-radius: 10px; border: 2px solid transparent;
-  transition: border-color .15s, background .15s;
-}
-.avatar-grid-item:hover { background: rgba(186,120,101,.1); }
-.avatar-grid-item.selected {
-  border-color: #BA7865;
-  background: rgba(186,120,101,.15);
-}
-.avatar-grid-item img {
-  width: 64px; height: 64px; object-fit: contain;
-}
-.avatar-grid-item span {
-  font-size: 9px; font-weight: 600; letter-spacing: .5px;
-  text-transform: uppercase; color: rgba(248,248,248,.5);
-  text-align: center; line-height: 1.2;
-}
-.avatar-confirm-btn {
-  margin: 0 16px 16px;
-  padding: 12px;
-  background: linear-gradient(135deg, #6E312C, #BA7865, #6E312C);
-  border: none; border-radius: 10px; cursor: pointer;
-  font-family: 'Montserrat', sans-serif;
-  font-size: 13px; font-weight: 700; letter-spacing: 1px;
-  text-transform: uppercase; color: #f8f8f8;
-  transition: opacity .15s; flex-shrink: 0;
-}
-.avatar-confirm-btn:hover { opacity: .9; }
-
-</style>
-</head>
-<body>
-
-<!-- TEST BANNER -->
-<div class="test-strip">🧪 THE POT GAMES · ENTORNO TEST · No es producción</div>
-
-<!-- ════════════════════════════════════════
-     LEADERBOARD
-     ════════════════════════════════════════ -->
-<div class="screen" id="screen-leaderboard">
-
-  <!-- Fondo animado -->
-  <div class="lb-hero-bg">
-    <div class="lb-hero-deco">🌿</div>
-  </div>
-
-  <!-- Top bar -->
-  <div class="lb-topbar">
-    <div class="lb-back">‹</div>
-    <div class="lb-title-wrap">
-      <div class="lb-title">Leaderboard</div>
-      <span class="lb-subtitle">The Pot Club</span>
-    </div>
-    <div class="lb-switch">
-      <div class="lb-switch-btn active" onclick="switchMode('local',this)">Local</div>
-      <div class="lb-switch-btn" onclick="switchMode('global',this)">Global</div>
-    </div>
-  </div>
-
-  <!-- Podio top 3 (render JS) -->
-  <div class="lb-podium" id="lb-podium"></div>
-
-  <!-- Lista posiciones 4+ -->
-  <div class="lb-list-bg" id="lb-list-bg">
-    <div class="lb-list-header">
-      <span class="lh-no">No.</span>
-      <span class="lh-name">Player name</span>
-      <span class="lh-pts">CP</span>
-    </div>
-    <div id="lb-list"></div>
-    <div class="lb-fade"></div>
-  </div>
-
-</div>
-
-<!-- ════════════════════════════════════════
-     PROFILE
-     ════════════════════════════════════════ -->
-<div class="screen" id="screen-profile">
-
-  <!-- Top bar -->
-  <div class="pf-topbar">
-    <div class="lb-back" onclick="goBack()" style="cursor:pointer">‹</div>
-    <div class="pf-title">Perfil</div>
-  </div>
-
-  <!-- Avatar section (render JS) -->
-  <div class="pf-avatar-wrap" id="pf-avatar-wrap"></div>
-
-  <!-- Tabs -->
-  <div class="pf-tabs">
-    <div class="pf-tab active" onclick="pfTab(this,'pf-info')">Info</div>
-    <div class="pf-tab" onclick="pfTab(this,'pf-badges')">Logros</div>
-    <div class="pf-tab" onclick="pfTab(this,'pf-history')">Historial</div>
-  </div>
-
-  <div class="pf-tab-pane active" id="pf-info"></div>
-  <div class="pf-tab-pane" id="pf-badges"></div>
-  <div class="pf-tab-pane" id="pf-history">
-    <div style="text-align:center;padding:40px;color:rgba(248,248,248,.35);font-size:13px">Historial próximamente</div>
-  </div>
-
-</div>
-
-<script>
 // ══════════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════════
@@ -595,23 +10,42 @@ let BADGES   = {};
 let ranked   = [];
 let state    = { jugadores:[], juegos:[], badges:[], rankings:[], jugador_badges:[] };
 
+// Cache de matches FIFA18 para el historial de jugadores
+let _matchesCache  = null;
+let _currentProfileId = null;
+
+// Tendencias de posición — se pueblan cuando haya histórico de rankings
+// Por ahora vacíos: no muestra flechas ↑↓ hasta tener comparación de sesiones
+const trends   = {};   // { [rankPos]: '▲' | '▼' }
+const trendCls = {};   // { [rankPos]: 'up' | 'down' }
+
 // ── Transformar datos del worker al formato que usa el HTML ──
 function transformData(data) {
   state = data;
 
-  // Construir PLAYERS con stats de FIFA
+  // Construir PLAYERS — stats agregadas de todos los juegos activos
   PLAYERS = data.jugadores.map(j => {
-    const rank = data.rankings.find(r => r.jugador_id === j.id && r.juego_id === 1);
+    // Suma rankings de todos los juegos del jugador
+    const allRanks = data.rankings.filter(r => r.jugador_id === j.id);
+    const rank1    = allRanks.find(r => r.juego_id === 1); // FIFA 18 como principal
+    const totals   = allRanks.reduce((acc, r) => ({
+      pj: acc.pj + (r.partidos  || 0),
+      w:  acc.w  + (r.victorias || 0),
+      d:  acc.d  + (r.empates   || 0),
+      l:  acc.l  + (r.derrotas  || 0),
+      gf: acc.gf + (r.gf        || 0),
+      gc: acc.gc + (r.gc        || 0),
+    }), { pj:0, w:0, d:0, l:0, gf:0, gc:0 });
+
     return {
-      id:  j.id,
-      nick: j.nickname,
-      em:  j.avatar_emoji || '🌿',
-      cp:  j.cogopoints || 0,
-      bio: j.bio || '',
-      pj:  rank?.partidos || 0,
-      avg: rank?.puntos   || 0,
-      // Victorias/empates/derrotas no están en CLUB_DB, se calculan desde FIFA si se necesitan
-      w: 0, d: 0, l: 0,
+      id:    j.id,
+      nick:  j.nickname,
+      em:    j.avatar_emoji || '🌿',
+      cp:    j.cogopoints   || 0,
+      bio:   j.bio          || '',
+      avg:   rank1?.puntos  || 0,   // promedio pts/partido en juego principal
+      racha: rank1?.racha   || 0,
+      ...totals,
     };
   });
 
@@ -630,27 +64,33 @@ function transformData(data) {
 
 // ── Carga desde el Worker ────────────────────────────
 async function init() {
+  showLoading(true);
   try {
-    showLoading(true);
-    const res  = await fetch(`${WORKER_URL}/api/club/estado`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    // Carga estado del club y partidos de FIFA18 en paralelo
+    const [clubRes, fifaRes] = await Promise.all([
+      fetch(`${WORKER_URL}/api/club/estado`),
+      fetch(`${WORKER_URL}/api/estado`),
+    ]);
+    if (!clubRes.ok) throw new Error(`HTTP ${clubRes.status}`);
+    const data = await clubRes.json();
     transformData(data);
-    showLoading(false);
-    renderLB();
+    if (fifaRes.ok) {
+      const fifaData = await fifaRes.json();
+      _matchesCache = fifaData.matches || [];
+    }
   } catch(e) {
     console.warn('Worker no disponible, usando datos demo:', e.message);
     loadDemoData();
+  } finally {
     showLoading(false);
     renderLB();
   }
 }
 
 function showLoading(on) {
-  // Muestra u oculta el spinner mientras carga
-  const lb = document.getElementById('lb-podium');
-  if (lb) lb.innerHTML = on
-    ? `<div style="width:100%;text-align:center;padding:40px;color:rgba(186,120,101,.5);font-size:12px;letter-spacing:2px;text-transform:uppercase">Cargando...</div>`
+  const bar = document.getElementById('lb-info-bar');
+  if (bar) bar.innerHTML = on
+    ? `🌿 &nbsp;Cargando datos...`
     : '';
 }
 
@@ -701,27 +141,41 @@ function renderLB() {
   const [p1,p2,p3] = ranked;
   const rest = ranked.slice(3);
 
+  // Info bar
+  const infoBar = document.getElementById('lb-info-bar');
+  if (infoBar) infoBar.innerHTML =
+    `🌿 &nbsp;<strong>${ranked.length}</strong> jugadores · Temporada activa · Líder: <strong>${p1.nick}</strong>`;
+
   document.getElementById('lb-podium').innerHTML = `
     <div class="pod-slot pod-slot-2" onclick="openPerfil(${p2.id})">
-      <div class="pod-hex pod-hex-border-23"><div class="pod-hex-inner" style="background:#1a0805">${getAvatarContent(p2.id)}</div></div>
-      <div class="pod-pill">${p2.nick}</div>
-      <div class="pod-rank">2nd</div>
-      <div class="pod-pts">${p2.cp}</div>
+      <div class="pod-circle pod-circle-2">
+        <div class="pod-circle-inner">${getAvatarContent(p2.id)}</div>
+        <div class="pod-rank-badge">2°</div>
+      </div>
+      <div class="pod-name">${p2.nick}</div>
+      <div class="pod-pts-wrap"><span class="pod-gem">🌿</span><span class="pod-pts">${p2.cp}</span></div>
       <div class="pod-pts-lbl">CogoPoints</div>
+      <div class="pod-pedestal"><div class="pod-ped-num">2</div></div>
     </div>
     <div class="pod-slot pod-slot-1" onclick="openPerfil(${p1.id})">
-      <div class="pod-hex pod-hex-border-1"><div class="pod-hex-inner" style="background:#1a0805">${getAvatarContent(p1.id)}</div></div>
-      <div class="pod-pill">${p1.nick}</div>
-      <div class="pod-rank">1st</div>
-      <div class="pod-pts">${p1.cp}</div>
+      <div class="pod-circle pod-circle-1">
+        <div class="pod-circle-inner">${getAvatarContent(p1.id)}</div>
+        <div class="pod-rank-badge">1°</div>
+      </div>
+      <div class="pod-name">${p1.nick}</div>
+      <div class="pod-pts-wrap"><span class="pod-gem">🌿</span><span class="pod-pts">${p1.cp}</span></div>
       <div class="pod-pts-lbl">CogoPoints</div>
+      <div class="pod-pedestal"><div class="pod-ped-num">1</div></div>
     </div>
     <div class="pod-slot pod-slot-3" onclick="openPerfil(${p3.id})">
-      <div class="pod-hex pod-hex-border-23"><div class="pod-hex-inner" style="background:#1a0805">${getAvatarContent(p3.id)}</div></div>
-      <div class="pod-pill">${p3.nick}</div>
-      <div class="pod-rank">3rd</div>
-      <div class="pod-pts">${p3.cp}</div>
+      <div class="pod-circle pod-circle-3">
+        <div class="pod-circle-inner">${getAvatarContent(p3.id)}</div>
+        <div class="pod-rank-badge">3°</div>
+      </div>
+      <div class="pod-name">${p3.nick}</div>
+      <div class="pod-pts-wrap"><span class="pod-gem">🌿</span><span class="pod-pts">${p3.cp}</span></div>
       <div class="pod-pts-lbl">CogoPoints</div>
+      <div class="pod-pedestal"><div class="pod-ped-num">3</div></div>
     </div>
   `;
 
@@ -732,16 +186,38 @@ function renderLB() {
     return `
     <div class="lb-row" onclick="openPerfil(${p.id})">
       ${t ? `<span class="lb-trend ${tc}">${t}</span>` : ''}
-      <div class="lb-no">${pos}.</div>
-      <div class="lb-ava" style="background:#1a0805;overflow:hidden">
-        <img src="${AVATARS.find(a=>a.id===(PLAYER_AVATARS[p.id]||AVATARS[0].id))?.src||AVATARS[0].src}" 
-             style="width:100%;height:100%;object-fit:contain" alt="">
+      <div class="lb-no">${pos}</div>
+      <div class="lb-player">
+        <div class="lb-ava">${getAvatarContent(p.id)}</div>
+        <div class="lb-name">${p.nick}</div>
       </div>
-      <div class="lb-name">${p.nick}</div>
       <div class="lb-pts">${p.cp}</div>
       <div class="lb-arr">›</div>
     </div>`;
   }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// HELPERS DE ESTADÍSTICAS
+// ══════════════════════════════════════════════════════
+
+// Racha invicta actual: cuenta partidos consecutivos sin perder
+// (victorias Y empates) recorriendo desde el más reciente hacia atrás
+function computeRachaInvicto(nick) {
+  if (!_matchesCache || !_matchesCache.length) return 0;
+  const playerMatches = [..._matchesCache]
+    .filter(m => m.p1 === nick || m.p2 === nick)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  let racha = 0;
+  for (let i = playerMatches.length - 1; i >= 0; i--) {
+    const m = playerMatches[i];
+    const isP1  = m.p1 === nick;
+    const myGol = isP1 ? m.g1 : m.g2;
+    const rivGol = isP1 ? m.g2 : m.g1;
+    if (myGol >= rivGol) racha++; // V o E → sigue invicto
+    else break;                   // D → fin de racha
+  }
+  return racha;
 }
 
 // ══════════════════════════════════════════════════════
@@ -750,6 +226,7 @@ function renderLB() {
 function openPerfil(id) {
   const p = PLAYERS.find(x => x.id === id);
   if (!p) return;
+  _currentProfileId = id;
   const pos = ranked.findIndex(x => x.id === id) + 1;
   const badges = BADGES[id] || [];
 
@@ -784,35 +261,52 @@ function openPerfil(id) {
         <span class="pf-rank-lbl">Promedio FIFA 18</span>
       </div>
     </div>
-    <div class="pf-stats-title">Estadísticas</div>
+    <div class="pf-stats-title">Estadísticas FIFA 18</div>
     <div class="pf-stats-grid">
       <div class="pf-stat"><span class="pf-stat-val">${p.pj}</span><span class="pf-stat-lbl">Partidos</span></div>
       <div class="pf-stat"><span class="pf-stat-val">${p.w}</span><span class="pf-stat-lbl">Victorias</span></div>
       <div class="pf-stat"><span class="pf-stat-val">${p.d}</span><span class="pf-stat-lbl">Empates</span></div>
       <div class="pf-stat"><span class="pf-stat-val">${p.l}</span><span class="pf-stat-lbl">Derrotas</span></div>
+      <div class="pf-stat"><span class="pf-stat-val">${p.gf}</span><span class="pf-stat-lbl">Goles a favor</span></div>
+      <div class="pf-stat"><span class="pf-stat-val">${p.gc}</span><span class="pf-stat-lbl">Goles en contra</span></div>
+      <div class="pf-stat"><span class="pf-stat-val">${p.gf - p.gc > 0 ? '+' : ''}${p.gf - p.gc}</span><span class="pf-stat-lbl">Diferencia</span></div>
+      <div class="pf-stat"><span class="pf-stat-val">${p.racha > 0 ? '🔥' + p.racha : p.racha}</span><span class="pf-stat-lbl">Racha actual</span></div>
     </div>
   `;
 
   // ── Logros FIFA 18 ──────────────────────────────────
+  // Racha invicta calculada desde el historial real de partidos
+  const rachaInvicto = computeRachaInvicto(p.nick);
+
+  // Valla menos invicta: menor promedio de GC entre jugadores con 5+ PJ
+  const elegibles = PLAYERS.filter(pl => pl.pj >= 5);
+  const mejorPromGC = elegibles.length
+    ? Math.min(...elegibles.map(pl => pl.gc / pl.pj))
+    : Infinity;
+  const esValla = p.pj >= 5 && (p.gc / p.pj) <= mejorPromGC + 0.001;
+
   // Definición completa de todos los logros posibles
   const LOGROS_DEF = [
-    // Rareza: legendario
-    { id:'fundador',      icono:'🌿', nombre:'Miembro Fundador',     desc:'Socio fundador del Pot Club',              rareza:'legendario', cond: j => true },
-    { id:'campeon',       icono:'👑', nombre:'Campeón',              desc:'Llegó al #1 del ranking',                  rareza:'legendario', cond: j => pos === 1 },
-    // Rareza: épico
-    { id:'veterano',      icono:'🎖️', nombre:'Veterano',            desc:'Jugó 15 o más partidos',                   rareza:'epico',      cond: j => j.pj >= 15 },
-    { id:'invicto',       icono:'🛡️', nombre:'Invicto',             desc:'Temporada sin perder ningún partido',       rareza:'epico',      cond: j => j.pj >= 5 && j.l === 0 },
-    { id:'upset_king',    icono:'💥', nombre:'Upset King',           desc:'Ganó siendo el equipo con menos estrellas', rareza:'epico',      cond: j => (BADGES[id]||[]).some(b=>b.n==='Upset King') },
-    // Rareza: raro
-    { id:'primer_gol',    icono:'⚽', nombre:'Primer Gol',           desc:'Cargó su primer partido al torneo',         rareza:'raro',       cond: j => j.pj >= 1 },
-    { id:'goleador',      icono:'🔥', nombre:'Goleador',             desc:'Marcó 5 o más goles en un partido',         rareza:'raro',       cond: j => (BADGES[id]||[]).some(b=>b.n==='Goleador') },
-    { id:'racha',         icono:'⚡', nombre:'En Racha',             desc:'Ganó 3 partidos consecutivos',              rareza:'raro',       cond: j => j.w >= 3 },
-    { id:'resistente',    icono:'💪', nombre:'Resistente',           desc:'Jugó 10 o más partidos',                   rareza:'raro',       cond: j => j.pj >= 10 },
-    // Rareza: común
-    { id:'debut',         icono:'🎮', nombre:'Debut',                desc:'Jugó su primer partido del torneo',         rareza:'comun',      cond: j => j.pj >= 1 },
-    { id:'constante',     icono:'📅', nombre:'Constante',            desc:'Jugó 5 o más partidos',                    rareza:'comun',      cond: j => j.pj >= 5 },
-    { id:'empate_artist', icono:'🤝', nombre:'Rey del Empate',       desc:'Empató 3 o más partidos',                  rareza:'comun',      cond: j => j.d >= 3 },
-    { id:'positivo',      icono:'📈', nombre:'Balance Positivo',     desc:'Más victorias que derrotas',               rareza:'comun',      cond: j => j.pj >= 3 && j.w > j.l },
+    // ── LEGENDARIO ──────────────────────────────────────────────
+    { id:'fundador',      icono:'🌿', nombre:'Miembro Fundador',     desc:'Socio fundador del Pot Club',                         rareza:'legendario', cond: j => true },
+    { id:'campeon',       icono:'👑', nombre:'Campeón',              desc:'Llegó al #1 del ranking general',                     rareza:'legendario', cond: j => pos === 1 },
+    { id:'racha_leg',     icono:'💫', nombre:'Racha Legendaria',     desc:'10 partidos consecutivos sin perder',                  rareza:'legendario', cond: j => rachaInvicto >= 10 },
+    // ── ÉPICO ────────────────────────────────────────────────────
+    { id:'veterano',      icono:'🎖️', nombre:'Veterano',            desc:'Jugó 15 o más partidos en el torneo',                 rareza:'epico',      cond: j => j.pj >= 15 },
+    { id:'invicto',       icono:'🛡️', nombre:'Invicto',             desc:'5 o más partidos sin perder ninguno en la temporada',  rareza:'epico',      cond: j => j.pj >= 5 && j.l === 0 },
+    { id:'racha_epic',    icono:'⚡', nombre:'Racha Imparable',      desc:'5 partidos consecutivos sin perder',                   rareza:'epico',      cond: j => rachaInvicto >= 5 },
+    { id:'valla',         icono:'🧤', nombre:'Valla Menos Invicta',  desc:'Menor promedio de goles en contra de la temporada',    rareza:'epico',      cond: j => esValla },
+    { id:'upset_king',    icono:'💥', nombre:'Upset King',           desc:'Ganó siendo el equipo con menos estrellas',            rareza:'epico',      cond: j => (BADGES[id]||[]).some(b=>b.n==='Upset King') },
+    // ── RARO ─────────────────────────────────────────────────────
+    { id:'racha_raro',    icono:'🔥', nombre:'En Racha',             desc:'3 partidos consecutivos sin perder',                   rareza:'raro',       cond: j => rachaInvicto >= 3 },
+    { id:'resistente',    icono:'💪', nombre:'Resistente',           desc:'Jugó 10 o más partidos en el torneo',                  rareza:'raro',       cond: j => j.pj >= 10 },
+    { id:'artillero',     icono:'🎯', nombre:'Artillero',            desc:'Anotó 30 o más goles en el torneo',                    rareza:'raro',       cond: j => j.gf >= 30 },
+    { id:'goleador',      icono:'⚽', nombre:'Goleador',             desc:'Marcó 5 o más goles en un solo partido',               rareza:'raro',       cond: j => (BADGES[id]||[]).some(b=>b.n==='Goleador') },
+    // ── COMÚN ────────────────────────────────────────────────────
+    { id:'debut',         icono:'🎮', nombre:'Debut',                desc:'Jugó su primer partido del torneo',                    rareza:'comun',      cond: j => j.pj >= 1 },
+    { id:'primera_vic',   icono:'🏅', nombre:'Primera Sangre',       desc:'Consiguió su primera victoria en el torneo',           rareza:'comun',      cond: j => j.w >= 1 },
+    { id:'positivo',      icono:'📈', nombre:'Balance Positivo',     desc:'Más victorias que derrotas en el torneo',              rareza:'comun',      cond: j => j.pj >= 3 && j.w > j.l },
+    { id:'empate_artist', icono:'🤝', nombre:'Rey del Empate',       desc:'Empató 3 o más partidos en el torneo',                 rareza:'comun',      cond: j => j.d >= 3 },
   ];
 
   const RAREZA_ORDEN = { legendario:0, epico:1, raro:2, comun:3 };
@@ -882,6 +376,7 @@ function pfTab(btn, paneId) {
   btn.closest('.screen').querySelectorAll('.pf-tab-pane').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById(paneId).classList.add('active');
+  if (paneId === 'pf-history') renderHistorial();
 }
 
 const AVATARS = [
@@ -988,8 +483,75 @@ function closeAvatarModal() {
   tempSelectedAvatar = null;
 }
 
+// ══════════════════════════════════════════════════════
+// HISTORIAL DE PARTIDOS POR JUGADOR
+// ══════════════════════════════════════════════════════
+async function renderHistorial() {
+  const el = document.getElementById('pf-history');
+  if (!el) return;
+
+  const p = PLAYERS.find(x => x.id === _currentProfileId);
+  if (!p) return;
+
+  el.innerHTML = '<div class="hist-loading">⏳ Cargando historial...</div>';
+
+  try {
+    if (!_matchesCache) {
+      const data = await fetch(`${WORKER_URL}/api/estado`).then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      });
+      _matchesCache = data.matches || [];
+    }
+
+    // Filtrar partidos del jugador y mostrar del más reciente al más antiguo
+    const playerMatches = [..._matchesCache]
+      .filter(m => m.p1 === p.nick || m.p2 === p.nick)
+      .reverse();
+
+    if (!playerMatches.length) {
+      el.innerHTML = '<div class="hist-empty">Sin partidos registrados aún</div>';
+      return;
+    }
+
+    const cards = playerMatches.map(m => {
+      const isP1   = m.p1 === p.nick;
+      const myGol  = isP1 ? m.g1 : m.g2;
+      const oppGol = isP1 ? m.g2 : m.g1;
+      const oppNick = isP1 ? m.p2 : m.p1;
+      const myTeam  = isP1 ? m.t1 : m.t2;
+      const oppTeam = isP1 ? m.t2 : m.t1;
+      const myPts   = isP1 ? m.pts1 : m.pts2;
+      const res     = myGol > oppGol ? 'win' : myGol < oppGol ? 'loss' : 'draw';
+      const resLbl  = res === 'win' ? 'V' : res === 'loss' ? 'D' : 'E';
+      const date    = new Date(m.date).toLocaleDateString('es-AR');
+
+      return `
+        <div class="hist-card hist-card-${res}">
+          <div class="hist-badge hist-badge-${res}">${resLbl}</div>
+          <div class="hist-info">
+            <div class="hist-score">${myGol} <span class="hist-dash">—</span> ${oppGol}</div>
+            <div class="hist-opp">vs <strong>${oppNick}</strong></div>
+            ${myTeam ? `<div class="hist-teams">${myTeam}${oppTeam ? ' · ' + oppTeam : ''}</div>` : ''}
+          </div>
+          <div class="hist-meta">
+            <div class="hist-date">${date}</div>
+            <div class="hist-pts">+${myPts} pts</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="hist-header">
+        <span>⚽ FIFA 18</span>
+        <span>${playerMatches.length} partido${playerMatches.length !== 1 ? 's' : ''}</span>
+      </div>
+      ${cards}
+    `;
+  } catch(e) {
+    el.innerHTML = '<div class="hist-empty" style="color:rgba(186,120,101,.5)">No se pudo cargar el historial</div>';
+  }
+}
+
 // Init — conecta al worker real
 init();
-</script>
-</body>
-</html>
