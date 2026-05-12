@@ -1018,21 +1018,19 @@ function _matchCard(m, idx) {
   return `<div class="match-card">
     <div class="mc-header">
       <span class="mc-date">${date}</span>
-      <div class="mc-result-wrap">
-        <span class="tag tag-${r1}">${r1==='win'?'V':r1==='loss'?'D':'E'}</span>
-        <span class="mc-pts">+${m.pts1} / +${m.pts2}</span>
-        ${delBtn}
-      </div>
+      ${delBtn}
     </div>
     <div class="mc-body">
       <div class="mc-side mc-left">
         <div class="mc-name">${m.p1}</div>
         <div class="mc-team">${m.t1||'—'} ${tb(m.tr1)}</div>
+        <div class="mc-pts mc-pts-${r1}">+${m.pts1} pts</div>
       </div>
       <div class="mc-score">${m.g1}<span class="mc-dash">—</span>${m.g2}</div>
       <div class="mc-side mc-right">
         <div class="mc-name">${m.p2}</div>
         <div class="mc-team">${m.t2||'—'} ${tb(m.tr2)}</div>
+        <div class="mc-pts mc-pts-${r2}">+${m.pts2} pts</div>
       </div>
     </div>
   </div>`;

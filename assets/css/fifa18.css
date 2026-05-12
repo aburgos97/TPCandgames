@@ -718,13 +718,13 @@ input[type="number"] { font-size: 2rem; }
   font-size: .72rem; font-weight: 500; color: var(--gray2);
   letter-spacing: .5px;
 }
-.mc-result-wrap {
-  display: flex; align-items: center; gap: .4rem;
-}
 .mc-pts {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: .72rem; color: var(--accent); font-weight: 600;
+  font-size: .78rem; font-weight: 700; margin-top: .15rem;
 }
+.mc-pts-win  { color: var(--win); }
+.mc-pts-loss { color: var(--gray2); }
+.mc-pts-draw { color: var(--draw); }
 .mc-del {
   background: none; border: none; cursor: pointer;
   color: var(--gray2); font-size: .65rem; padding: 2px 4px;
