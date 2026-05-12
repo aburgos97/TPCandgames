@@ -821,11 +821,21 @@ html, body {
 .riot-game-title {
   font-size: 9px; font-weight: 700;
   letter-spacing: 1.5px; text-transform: uppercase;
-  color: rgba(248,248,248,.35); margin-bottom: 4px;
+  color: rgba(248,248,248,.35); margin-bottom: 6px;
+}
+
+.riot-rank-row {
+  display: flex; align-items: center; gap: 8px;
+}
+
+.riot-emblem {
+  width: 48px; height: 48px;
+  object-fit: contain; flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.5));
 }
 
 .riot-tier {
-  font-size: 14px; font-weight: 800;
+  font-size: 13px; font-weight: 800;
   text-transform: uppercase; letter-spacing: 1px;
 }
 
@@ -842,3 +852,12 @@ html, body {
   font-size: 11px; color: rgba(248,248,248,.3);
   font-style: italic; margin-top: 4px;
 }
+
+.riot-refresh-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 10px; padding: 0 0 0 4px;
+  opacity: .45; vertical-align: middle;
+  transition: opacity .2s;
+}
+.riot-refresh-btn:hover  { opacity: 1; }
+.riot-refresh-btn:disabled { cursor: default; }

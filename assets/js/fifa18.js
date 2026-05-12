@@ -1009,23 +1009,38 @@ function renderLadder(){
 }
 
 
+function _matchCard(m, idx) {
+  const r1 = m.g1 > m.g2 ? 'win' : m.g1 < m.g2 ? 'loss' : 'draw';
+  const r2 = m.g2 > m.g1 ? 'win' : m.g2 < m.g1 ? 'loss' : 'draw';
+  const date = new Date(m.date).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+  const delBtn = idx !== undefined
+    ? `<button class="mc-del" onclick="deleteMatch(${idx})">✕</button>` : '';
+  return `<div class="match-card">
+    <div class="mc-header">
+      <span class="mc-date">${date}</span>
+      ${delBtn}
+    </div>
+    <div class="mc-body">
+      <div class="mc-side mc-left">
+        <div class="mc-name">${m.p1}</div>
+        <div class="mc-team">${m.t1||'—'} ${tb(m.tr1)}</div>
+        <div class="mc-pts mc-pts-${r1}">+${m.pts1} pts</div>
+      </div>
+      <div class="mc-score">${m.g1}<span class="mc-dash">—</span>${m.g2}</div>
+      <div class="mc-side mc-right">
+        <div class="mc-name">${m.p2}</div>
+        <div class="mc-team">${m.t2||'—'} ${tb(m.tr2)}</div>
+        <div class="mc-pts mc-pts-${r2}">+${m.pts2} pts</div>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderRecentMatches(){
   const el=document.getElementById('recent-matches');if(!el)return;
   const r=[...state.matches].reverse().slice(0,5);
   if(!r.length){el.innerHTML='<div class="empty-state"><span class="big">⚽</span>Sin partidos</div>';return;}
-  el.innerHTML=r.map(m=>{
-    const r1=m.g1>m.g2?'win':m.g1<m.g2?'loss':'draw';
-    return`<div class="match-card">
-      <div class="match-teams">
-        <div style="margin-bottom:.2rem"><strong>${m.p1}</strong> <span style="color:var(--muted);font-size:.75rem">${m.t1}</span> ${tb(m.tr1)}</div>
-        <div><strong>${m.p2}</strong> <span style="color:var(--muted);font-size:.75rem">${m.t2}</span> ${tb(m.tr2)}</div>
-      </div>
-      <div class="match-score">${m.g1}—${m.g2}</div>
-      <div class="match-pts-awarded"><div class="match-date">${new Date(m.date).toLocaleDateString('es-AR')}</div>
-        <span class="tag tag-${r1}">${r1==='win'?'V':r1==='loss'?'D':'E'}</span>
-        <div style="margin-top:.2rem">+<span style="color:var(--accent)">${m.pts1}</span>/<span style="color:var(--accent)">${m.pts2}</span></div>
-      </div></div>`;
-  }).join('');
+  el.innerHTML=r.map(m=>_matchCard(m)).join('');
 }
 
 function populatePlayerSelects(){
@@ -1048,17 +1063,7 @@ function renderAllMatches(){
   if(!state.matches.length){el.innerHTML='<div class="empty-state"><span class="big">⚽</span>Sin partidos</div>';return;}
   el.innerHTML=[...state.matches].reverse().map((m,ri)=>{
     const idx=state.matches.length-1-ri;
-    const r1=m.g1>m.g2?'win':m.g1<m.g2?'loss':'draw';
-    const r2=m.g2>m.g1?'win':m.g2<m.g1?'loss':'draw';
-    return`<div class="match-card">
-      <div class="match-teams">
-        <div style="margin-bottom:.2rem"><strong>${m.p1}</strong> <span style="color:var(--muted);font-size:.75rem">${m.t1}</span> ${tb(m.tr1)} <span class="tag tag-${r1}">${r1==='win'?'VICTORIA':r1==='loss'?'DERROTA':'EMPATE'}</span> <span style="color:var(--accent);font-size:.8rem">+${m.pts1}pts</span></div>
-        <div><strong>${m.p2}</strong> <span style="color:var(--muted);font-size:.75rem">${m.t2}</span> ${tb(m.tr2)} <span class="tag tag-${r2}">${r2==='win'?'VICTORIA':r2==='loss'?'DERROTA':'EMPATE'}</span> <span style="color:var(--accent);font-size:.8rem">+${m.pts2}pts</span></div>
-      </div>
-      <div class="match-score">${m.g1}—${m.g2}</div>
-      <div class="match-pts-awarded"><div class="match-date">${new Date(m.date).toLocaleDateString('es-AR')}</div>
-        <button class="btn btn-danger btn-sm" style="margin-top:.4rem" onclick="deleteMatch(${idx})">Borrar</button>
-      </div></div>`;
+    return _matchCard(m,idx);
   }).join('');
 }
 

@@ -576,7 +576,7 @@ const RIOT_TIER_COLOR = {
 function _riotRankCard(title, entry, unavailable) {
   if (unavailable) return `
     <div class="riot-card">
-      <div class="riot-game-title">${title}</div>
+      <div class="riot-game-title">${title}${title.includes('TFT') ? `<button class="riot-refresh-btn" onclick="refreshTFT(this)" title="Buscar ranking">🔄</button>` : ''}</div>
       <div class="riot-unranked">No disponible</div>
     </div>`;
   if (!entry) return `
@@ -589,12 +589,20 @@ function _riotRankCard(title, entry, unavailable) {
   const rankStr  = `${entry.tier}${noNum ? '' : ' ' + entry.rank}`;
   const total    = entry.wins + entry.losses;
   const wr       = total > 0 ? Math.round(entry.wins / total * 100) : 0;
+  const tierLower = entry.tier.toLowerCase();
+  const emblem    = `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-mini-crests/${tierLower}.png`;
+  const refreshBtn = title.includes('TFT') ? `<button class="riot-refresh-btn" onclick="refreshTFT(this)" title="Actualizar">🔄</button>` : '';
   return `
     <div class="riot-card">
-      <div class="riot-game-title">${title}</div>
-      <div class="riot-tier" style="color:${color}">${rankStr}</div>
-      <div class="riot-lp">${entry.leaguePoints} LP</div>
-      <div class="riot-wr">${entry.wins}V · ${entry.losses}D · ${wr}%</div>
+      <div class="riot-game-title">${title}${refreshBtn}</div>
+      <div class="riot-rank-row">
+        <img class="riot-emblem" src="${emblem}" alt="${tierLower}" loading="lazy">
+        <div>
+          <div class="riot-tier" style="color:${color}">${rankStr}</div>
+          <div class="riot-lp">${entry.leaguePoints} LP</div>
+          <div class="riot-wr">${entry.wins}V · ${entry.losses}D · ${wr}%</div>
+        </div>
+      </div>
     </div>`;
 }
 
@@ -619,6 +627,29 @@ async function fetchAndRenderRiot(playerId) {
       </div>`;
   } catch(e) {
     el.innerHTML = '<div class="riot-error">No se pudo cargar Riot</div>';
+  }
+}
+
+async function refreshTFT(btn) {
+  const account = RIOT_ACCOUNTS[_currentProfileId];
+  if (!account) return;
+  btn.disabled = true;
+  btn.textContent = '⏳';
+  try {
+    const res = await fetch(`${WORKER_URL}/api/riot/refresh-tft`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gameName: account.gameName, tagLine: account.tagLine }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const { ranked } = await res.json();
+    const el = document.getElementById('pf-riot');
+    if (!el) return;
+    const tftHtml = _riotRankCard('TFT · Ranked', ranked, false);
+    el.querySelector('.riot-grid').children[1].outerHTML = tftHtml;
+  } catch(e) {
+    btn.textContent = '❌';
+    setTimeout(() => { btn.textContent = '🔄'; btn.disabled = false; }, 2000);
   }
 }
 
