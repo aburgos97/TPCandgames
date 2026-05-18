@@ -571,6 +571,15 @@ input[type="number"] { font-size: 2rem; }
 .ldr-c-pos, .ldr-thead .ldr-c-pos   { flex: 0 0 36px; text-align: center; }
 .ldr-c-info, .ldr-thead .ldr-c-info { flex: 1 1 auto; min-width: 0; padding: 0 .6rem; }
 .ldr-c-prom, .ldr-thead .ldr-c-prom { flex: 0 0 56px; text-align: center; }
+.ldr-c-delta, .ldr-thead .ldr-c-delta {
+  flex: 0 0 54px; text-align: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: .78rem; font-weight: 700;
+}
+.ldr-delta-up   { color: #4caf50; }
+.ldr-delta-down { color: var(--lose); }
+.ldr-delta-na   { color: var(--gray2); font-weight: 400; }
+
 .ldr-c-forma, .ldr-thead .ldr-c-forma {
   flex: 0 0 88px;
   display: flex; justify-content: flex-end; align-items: center;
