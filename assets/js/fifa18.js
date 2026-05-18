@@ -874,28 +874,55 @@ function renderAll(){
 }
 
 function buildLadder(){
-  const m={};
-  state.players.forEach(p=>{m[p]={name:p,pts:0,w:0,l:0,d:0,gf:0,ga:0,played:0,form:[]}});
-  state.matches.forEach(x=>{
-    [x.p1,x.p2].forEach(p=>{if(!m[p])m[p]={name:p,pts:0,w:0,l:0,d:0,gf:0,ga:0,played:0,form:[]}});
-    m[x.p1].gf+=x.g1;m[x.p1].ga+=x.g2;m[x.p1].played++;
-    m[x.p2].gf+=x.g2;m[x.p2].ga+=x.g1;m[x.p2].played++;
-    if(x.g1>x.g2){
-      m[x.p1].pts+=x.pts1;m[x.p1].w++;m[x.p1].form.push('V');
-      m[x.p2].l++;m[x.p2].form.push('D');
-    } else if(x.g2>x.g1){
-      m[x.p2].pts+=x.pts2;m[x.p2].w++;m[x.p2].form.push('V');
-      m[x.p1].l++;m[x.p1].form.push('D');
+  // Lunes 00:00 de la semana actual
+  const now = new Date();
+  const dow = now.getDay(); // 0=Dom
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + (dow === 0 ? -6 : 1 - dow));
+  monday.setHours(0, 0, 0, 0);
+
+  const mk = p => ({ name:p, pts:0, w:0, l:0, d:0, gf:0, ga:0, played:0, form:[],
+                      ptsPre:0, playedPre:0, playedThisWeek:0 });
+  const m = {};
+  state.players.forEach(p => { m[p] = mk(p); });
+
+  state.matches.forEach(x => {
+    [x.p1, x.p2].forEach(p => { if (!m[p]) m[p] = mk(p); });
+    const isThisWeek = new Date(x.date) >= monday;
+
+    m[x.p1].gf += x.g1; m[x.p1].ga += x.g2; m[x.p1].played++;
+    m[x.p2].gf += x.g2; m[x.p2].ga += x.g1; m[x.p2].played++;
+
+    if (isThisWeek) {
+      m[x.p1].playedThisWeek++;
+      m[x.p2].playedThisWeek++;
     } else {
-      m[x.p1].pts+=x.pts1;m[x.p1].d++;m[x.p1].form.push('E');
-      m[x.p2].pts+=x.pts2;m[x.p2].d++;m[x.p2].form.push('E');
+      m[x.p1].ptsPre += x.pts1; m[x.p1].playedPre++;
+      m[x.p2].ptsPre += x.pts2; m[x.p2].playedPre++;  // pts2=0 si perdió, correcto
+    }
+
+    if (x.g1 > x.g2) {
+      m[x.p1].pts += x.pts1; m[x.p1].w++; m[x.p1].form.push('V');
+      m[x.p2].l++; m[x.p2].form.push('D');
+    } else if (x.g2 > x.g1) {
+      m[x.p2].pts += x.pts2; m[x.p2].w++; m[x.p2].form.push('V');
+      m[x.p1].l++; m[x.p1].form.push('D');
+    } else {
+      m[x.p1].pts += x.pts1; m[x.p1].d++; m[x.p1].form.push('E');
+      m[x.p2].pts += x.pts2; m[x.p2].d++; m[x.p2].form.push('E');
     }
   });
-  return Object.values(m).map(p=>({
-    ...p,
-    avg: p.played>0 ? Math.round((p.pts/p.played)*100)/100 : 0,
-    recentForm: p.form.slice(-5)
-  })).sort((a,b)=>b.avg-a.avg||(b.gf-b.ga)-(a.gf-a.ga));
+
+  return Object.values(m).map(p => {
+    const avg = p.played > 0 ? Math.round((p.pts / p.played) * 100) / 100 : 0;
+    // Delta solo si jugó esta semana Y tiene historial previo para comparar
+    let weeklyDelta = null;
+    if (p.playedThisWeek > 0 && p.playedPre > 0) {
+      const avgPre = p.ptsPre / p.playedPre;
+      weeklyDelta = Math.round((avg - avgPre) * 100) / 100;
+    }
+    return { ...p, avg, weeklyDelta, recentForm: p.form.slice(-5) };
+  }).sort((a,b) => b.avg - a.avg || (b.gf - b.ga) - (a.gf - a.ga));
 }
 
 // Genera badge de estrellas. Acepta objeto equipo o número de estrellas.
@@ -950,6 +977,13 @@ function renderLadder(){
     }).join('');
   }
 
+  function deltaHTML(weeklyDelta) {
+    if (weeklyDelta === null) return '<span class="ldr-delta-na">—</span>';
+    if (weeklyDelta > 0)  return `<span class="ldr-delta-up">+${weeklyDelta.toFixed(2)}</span>`;
+    if (weeklyDelta < 0)  return `<span class="ldr-delta-down">${weeklyDelta.toFixed(2)}</span>`;
+    return '<span class="ldr-delta-na">+0.00</span>';
+  }
+
   function rowClasificado(p, i) {
     const medal = ['🥇','🥈','🥉'][i] || '';
     return `<div class="ldr-row${i<3?' ldr-top':''}">
@@ -962,6 +996,7 @@ function renderLadder(){
         <span class="ldr-prom">${p.avg.toFixed(2)}</span>
         <span class="ldr-prom-lbl">prom</span>
       </div>
+      <div class="ldr-c-delta">${deltaHTML(p.weeklyDelta)}</div>
       <div class="ldr-c-forma">${formaHTML(p.recentForm)}</div>
     </div>`;
   }
@@ -983,6 +1018,7 @@ function renderLadder(){
         <span class="ldr-prom" style="font-size:.85rem;-webkit-text-fill-color:var(--gray2);color:var(--gray2)">${p.avg > 0 ? p.avg.toFixed(2) : '—'}</span>
         <span class="ldr-prom-lbl">prom</span>
       </div>
+      <div class="ldr-c-delta">${deltaHTML(p.weeklyDelta)}</div>
       <div class="ldr-c-forma">${formaHTML(p.recentForm)}</div>
     </div>`;
   }
@@ -991,6 +1027,7 @@ function renderLadder(){
     <div class="ldr-c-pos">#</div>
     <div class="ldr-c-info">Jugador</div>
     <div class="ldr-c-prom">Prom</div>
+    <div class="ldr-c-delta">Sem.</div>
     <div class="ldr-c-forma">Forma</div>
   </div>`;
 
